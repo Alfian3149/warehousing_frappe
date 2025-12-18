@@ -1,0 +1,176 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "naming_series:",
+ "creation": "2025-12-17 15:12:57.989699",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "header_section",
+  "naming_series",
+  "column_break_tkud",
+  "purchase_order",
+  "transaction_date",
+  "packing_slip",
+  "column_break_xyzd",
+  "site",
+  "order_date",
+  "ship_date",
+  "supplier_and_delivery_information_section",
+  "supplier",
+  "small_text_zbwm",
+  "column_break_prdo",
+  "shipto",
+  "small_text_johz",
+  "field_for_auto",
+  "full_receipt_for_all_lines",
+  "column_break_qeoz",
+  "assign_an_expiration_date_value_for_specified_items",
+  "initiate_receipt_location",
+  "section_break_tojq",
+  "material_incoming_item"
+ ],
+ "fields": [
+  {
+   "fieldname": "header_section",
+   "fieldtype": "Section Break",
+   "label": "Header"
+  },
+  {
+   "fieldname": "column_break_tkud",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "purchase_order",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Purchase Order",
+   "reqd": 1
+  },
+  {
+   "fieldname": "transaction_date",
+   "fieldtype": "Date",
+   "label": "Transaction Date"
+  },
+  {
+   "fieldname": "packing_slip",
+   "fieldtype": "Data",
+   "label": "Packing Slip"
+  },
+  {
+   "fieldname": "column_break_xyzd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "site",
+   "fieldtype": "Data",
+   "label": "Site"
+  },
+  {
+   "fieldname": "order_date",
+   "fieldtype": "Date",
+   "label": "Order Date"
+  },
+  {
+   "fieldname": "ship_date",
+   "fieldtype": "Date",
+   "label": "Ship Date"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "supplier_and_delivery_information_section",
+   "fieldtype": "Section Break",
+   "label": "Supplier and Delivery Information"
+  },
+  {
+   "default": "0",
+   "fieldname": "full_receipt_for_all_lines",
+   "fieldtype": "Check",
+   "label": "Full Receipt For All Lines?"
+  },
+  {
+   "fieldname": "column_break_qeoz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "assign_an_expiration_date_value_for_specified_items",
+   "fieldtype": "Date",
+   "label": "Assign an expiration date value for specified items?"
+  },
+  {
+   "fieldname": "initiate_receipt_location",
+   "fieldtype": "Data",
+   "label": "Initiate Receipt location"
+  },
+  {
+   "fieldname": "section_break_tojq",
+   "fieldtype": "Section Break",
+   "label": "Line Item"
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Master ID",
+   "options": "MTL-INC-.YYYY.-"
+  },
+  {
+   "fieldname": "material_incoming_item",
+   "fieldtype": "Table",
+   "options": "Material Incoming Item"
+  },
+  {
+   "fieldname": "supplier",
+   "fieldtype": "Data",
+   "label": "Supplier"
+  },
+  {
+   "fieldname": "small_text_zbwm",
+   "fieldtype": "Small Text"
+  },
+  {
+   "fieldname": "column_break_prdo",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "shipto",
+   "fieldtype": "Data",
+   "label": "Shipto"
+  },
+  {
+   "fieldname": "small_text_johz",
+   "fieldtype": "Small Text"
+  },
+  {
+   "fieldname": "field_for_auto",
+   "fieldtype": "Section Break"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-12-17 16:50:14.654593",
+ "modified_by": "Administrator",
+ "module": "warehousing",
+ "name": "Material Incoming",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

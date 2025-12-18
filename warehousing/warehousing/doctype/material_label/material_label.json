@@ -1,0 +1,76 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-12-18 12:02:24.703302",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "master_id",
+  "material_incoming_item_link",
+  "lotserial",
+  "pallet",
+  "qty",
+  "barcode_fwrj"
+ ],
+ "fields": [
+  {
+   "fieldname": "master_id",
+   "fieldtype": "Select",
+   "label": "Master ID",
+   "options": "MTL-LBL-.YYYY.-"
+  },
+  {
+   "fieldname": "material_incoming_item_link",
+   "fieldtype": "Link",
+   "label": "Material Incoming Item link",
+   "options": "Material Incoming Item"
+  },
+  {
+   "fieldname": "lotserial",
+   "fieldtype": "Data",
+   "label": "Lotserial"
+  },
+  {
+   "fieldname": "pallet",
+   "fieldtype": "Data",
+   "label": "Pallet"
+  },
+  {
+   "fieldname": "qty",
+   "fieldtype": "Float",
+   "label": "Qty"
+  },
+  {
+   "fieldname": "barcode_fwrj",
+   "fieldtype": "Barcode",
+   "label": "Barcode Scan"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-12-18 13:50:54.168405",
+ "modified_by": "Administrator",
+ "module": "warehousing",
+ "name": "Material Label",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -10,25 +10,26 @@
   "naming_series",
   "column_break_tkud",
   "purchase_order",
-  "transaction_date",
+  "site",
   "packing_slip",
   "column_break_xyzd",
-  "site",
   "order_date",
   "ship_date",
+  "transaction_date",
   "supplier_and_delivery_information_section",
   "supplier",
-  "small_text_zbwm",
+  "supplier_address",
   "column_break_prdo",
   "shipto",
-  "small_text_johz",
+  "shipto_address",
   "field_for_auto",
   "full_receipt_for_all_lines",
   "column_break_qeoz",
   "assign_an_expiration_date_value_for_specified_items",
   "initiate_receipt_location",
   "section_break_tojq",
-  "material_incoming_item"
+  "material_incoming_item",
+  "amended_from"
  ],
  "fields": [
   {
@@ -124,10 +125,6 @@
    "label": "Supplier"
   },
   {
-   "fieldname": "small_text_zbwm",
-   "fieldtype": "Small Text"
-  },
-  {
    "fieldname": "column_break_prdo",
    "fieldtype": "Column Break"
   },
@@ -137,18 +134,33 @@
    "label": "Shipto"
   },
   {
-   "fieldname": "small_text_johz",
+   "fieldname": "field_for_auto",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "supplier_address",
    "fieldtype": "Small Text"
   },
   {
-   "fieldname": "field_for_auto",
-   "fieldtype": "Section Break"
+   "fieldname": "shipto_address",
+   "fieldtype": "Small Text"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Material Incoming",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
+ "is_submittable": 1,
  "links": [],
- "modified": "2025-12-17 16:50:14.654593",
+ "modified": "2025-12-19 08:22:49.215452",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Material Incoming",

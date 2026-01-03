@@ -6,7 +6,9 @@
  "engine": "InnoDB",
  "field_order": [
   "master_id",
-  "material_incoming_item_link",
+  "material_incoming_link",
+  "line",
+  "item",
   "lotserial",
   "pallet",
   "qty",
@@ -20,15 +22,11 @@
    "options": "MTL-LBL-.YYYY.-"
   },
   {
-   "fieldname": "material_incoming_item_link",
-   "fieldtype": "Link",
-   "label": "Material Incoming Item link",
-   "options": "Material Incoming Item"
-  },
-  {
    "fieldname": "lotserial",
    "fieldtype": "Data",
-   "label": "Lotserial"
+   "in_list_view": 1,
+   "label": "Lotserial",
+   "reqd": 1
   },
   {
    "fieldname": "pallet",
@@ -38,18 +36,39 @@
   {
    "fieldname": "qty",
    "fieldtype": "Float",
-   "label": "Qty"
+   "label": "Qty",
+   "reqd": 1
   },
   {
    "fieldname": "barcode_fwrj",
    "fieldtype": "Barcode",
    "label": "Barcode Scan"
+  },
+  {
+   "fieldname": "material_incoming_link",
+   "fieldtype": "Data",
+   "label": "Material Incoming Link"
+  },
+  {
+   "fieldname": "line",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Ln",
+   "reqd": 1
+  },
+  {
+   "fieldname": "item",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Item",
+   "options": "Part Master",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-18 13:50:54.168405",
+ "modified": "2026-01-02 23:00:57.051787",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Material Label",
@@ -68,6 +87,7 @@
    "write": 1
   }
  ],
+ "quick_entry": 1,
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
  "sort_field": "creation",

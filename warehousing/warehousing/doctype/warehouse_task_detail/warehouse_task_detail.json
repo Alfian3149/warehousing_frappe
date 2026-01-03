@@ -1,0 +1,86 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-01-02 13:09:08.077638",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "line_po",
+  "item",
+  "lotserial",
+  "qty_confirmation",
+  "locationsource",
+  "locationdestination",
+  "executor",
+  "pic_execution",
+  "status"
+ ],
+ "fields": [
+  {
+   "fieldname": "item",
+   "fieldtype": "Link",
+   "label": "Item",
+   "options": "Part Master",
+   "search_index": 1
+  },
+  {
+   "fieldname": "lotserial",
+   "fieldtype": "Data",
+   "label": "Lotserial",
+   "search_index": 1
+  },
+  {
+   "fieldname": "qty_confirmation",
+   "fieldtype": "Float",
+   "label": "Qty Confirmation"
+  },
+  {
+   "fieldname": "pic_execution",
+   "fieldtype": "Datetime",
+   "label": "Execution Time"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Pending\nIn Progress\nCompleted\nCancelled",
+   "search_index": 1
+  },
+  {
+   "fieldname": "line_po",
+   "fieldtype": "Int",
+   "label": "Line"
+  },
+  {
+   "fieldname": "executor",
+   "fieldtype": "Link",
+   "label": "Executor",
+   "options": "User"
+  },
+  {
+   "fieldname": "locationsource",
+   "fieldtype": "Data",
+   "label": "Location(Source)"
+  },
+  {
+   "fieldname": "locationdestination",
+   "fieldtype": "Data",
+   "label": "Location(Destination)"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-01-02 23:01:29.621859",
+ "modified_by": "Administrator",
+ "module": "warehousing",
+ "name": "Warehouse Task Detail",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -63,7 +63,7 @@ frappe.ui.form.on("Material Incoming", {
                                 fieldtype: "Int",
                                 in_list_view: 1, 
                                 reqd: 1, 
-                                columns: 2,
+                                columns: 1,
                             },
                             { 
                                 fieldname: "item", 
@@ -72,6 +72,14 @@ frappe.ui.form.on("Material Incoming", {
                                 options: "Part Master",
                                 in_list_view: 1,  
                                 reqd: 1, 
+                                columns: 2
+                            },
+                            { 
+                                fieldname: "description", 
+                                label: "Description", 
+                                fieldtype: "Data", 
+                                in_list_view: 1,  
+                                reqd: 0, 
                                 columns: 3 
                             },
                             { 
@@ -88,7 +96,7 @@ frappe.ui.form.on("Material Incoming", {
                                 fieldtype: "Float", 
                                 in_list_view: 1, 
                                 reqd: 1, 
-                                columns: 2
+                                columns: 1
                             }
                         ],
                         on_add_row: (idx) => {
@@ -184,11 +192,9 @@ frappe.ui.form.on("Material Incoming", {
             });
 
             dialog.get_field('xx_material_incoming_item').grid.on_row_delete = function(doc, cdt, cdn) {
-            
                 msgprint("Row deleted");
             }
             
-
             frappe.db.get_list('Material Label', {
                 filters: {
                     'material_incoming_link': frm.doc.name, // Nama dokumen induknya
@@ -197,20 +203,66 @@ frappe.ui.form.on("Material Incoming", {
                 order_by: 'line asc'
             }).then(data => {
                 if (data && data.length > 0) {
-                    // Melakukan looping untuk menambahkan nomor urut
                     data.forEach((row, index) => {
-                        // index dimulai dari 0, maka ditambah 1
                         row.no = index + 1; 
-                        
-                        // Jika Anda punya field custom bernama 'no_urut' di child table dialog:
-                        // row.no_urut = index + 1; 
                     });
+                    
+                    const items = [...new Set(data.map(d => d.item))];
+                    
+                    frappe.call({
+                        method: 'frappe.client.get_list',
+                        args: {
+                            doctype: 'Part Master',
+                            filters: { 'part': ['in', items] },
+                            fields: ['part', 'description']
+                        },
+                        callback: function(r) {
+                            if (r.message) {
+                                
+                                // Buat mapping deskripsi { "ITEM01": "Deskripsi A" }
+                                let descriptions = {};
+                                r.message.forEach(dt => {
+                                    descriptions[dt.part] = dt.description;
+                                });
 
-                    dialog.get_field('xx_material_incoming_item').df.data = data;
-                    dialog.get_field('xx_material_incoming_item').refresh();
+                                // 3. Gabungkan deskripsi ke data asli
+                                data.forEach(row => {
+                                    
+                                    row.description = descriptions[row.item] || "";
+                                });
+
+                                // 4. Set data ke tabel dialog dan refresh
+                                dialog.get_field('xx_material_incoming_item').df.data = data;
+                                dialog.get_field('xx_material_incoming_item').refresh();
+    
+                            }
+                        }
+                    });
+                    
+
+                    /* dialog.get_field('xx_material_incoming_item').df.data = data;
+                    dialog.get_field('xx_material_incoming_item').refresh(); */
                 }
             });
             dialog.show();
+            let grid = dialog.get_field('xx_material_incoming_item').grid;
+
+            // 2. Berikan sedikit jeda agar elemen HTML selesai dibuat
+            setTimeout(() => {
+                // Memperlebar baris tabel (Header & Body) agar tidak menyempit
+                // Sesuaikan 1000px dengan total lebar yang Anda inginkan
+                grid.wrapper.find('.grid-row').css('min-width', '1000px');
+
+                // Mengizinkan scroll horizontal pada body tabel jika melebihi lebar dialog
+                grid.wrapper.find('.grid-body').css({
+                    'overflow-x': 'auto',
+                    'display': 'block'
+                });
+
+                // Opsional: Kecilkan kolom yang tidak terlalu penting (seperti No. atau PO Line)
+                // agar Qty lebih cepat terlihat
+                grid.wrapper.find(".static-column[data-fieldname='no']").css('width', '10px');
+            }, 300);
             
 
 

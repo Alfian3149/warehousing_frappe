@@ -10,19 +10,30 @@
   "task_type",
   "reference_doctype",
   "reference_name",
+  "po_number",
+  "status",
   "section_break_sfld",
   "assign_to_user",
   "date_instruction",
   "column_break_suxv",
   "assign_to_role",
   "time_instruction",
+  "summary_result_section",
+  "date_started",
+  "time_started",
+  "users_picker",
+  "column_break_ydio",
+  "date_ending",
+  "time_ending",
+  "durations",
   "section_break_zcmk",
-  "table_jaqu"
+  "warehouse_task_detail"
  ],
  "fields": [
   {
    "fieldname": "section_break_kex1",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "label": "Task Information"
   },
   {
    "fieldname": "amended_from",
@@ -42,7 +53,8 @@
   },
   {
    "fieldname": "section_break_sfld",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "label": "Instruction Details"
   },
   {
    "fieldname": "assign_to_user",
@@ -80,21 +92,71 @@
    "fieldtype": "Section Break"
   },
   {
-   "fieldname": "table_jaqu",
+   "fieldname": "reference_name",
+   "fieldtype": "Data",
+   "label": "Reference Name"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Pending\nIn Progress\nCompleted\nCancelled"
+  },
+  {
+   "fieldname": "warehouse_task_detail",
    "fieldtype": "Table",
    "options": "Warehouse Task Detail"
   },
   {
-   "fieldname": "reference_name",
+   "fieldname": "po_number",
    "fieldtype": "Data",
-   "label": "Reference Name"
+   "hidden": 1,
+   "label": "PO Number"
+  },
+  {
+   "fieldname": "summary_result_section",
+   "fieldtype": "Section Break",
+   "label": "Summary Result"
+  },
+  {
+   "fieldname": "date_started",
+   "fieldtype": "Date",
+   "label": "Date Started"
+  },
+  {
+   "fieldname": "time_started",
+   "fieldtype": "Time",
+   "label": "Time Started"
+  },
+  {
+   "fieldname": "users_picker",
+   "fieldtype": "Data",
+   "label": "Users Picker"
+  },
+  {
+   "fieldname": "column_break_ydio",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "date_ending",
+   "fieldtype": "Date",
+   "label": "Date Ending"
+  },
+  {
+   "fieldname": "time_ending",
+   "fieldtype": "Time",
+   "label": "Time Ending"
+  },
+  {
+   "fieldname": "durations",
+   "fieldtype": "Data",
+   "label": "Durations"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
- "is_submittable": 1,
  "links": [],
- "modified": "2026-01-02 16:35:37.467693",
+ "modified": "2026-01-04 19:50:03.575329",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Warehouse Task",
@@ -110,7 +172,6 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
-   "submit": 1,
    "write": 1
   }
  ],

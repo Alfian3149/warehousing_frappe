@@ -7,6 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "material_label_link",
+  "warehouse_task_link",
   "line_po",
   "item",
   "description",
@@ -17,6 +18,7 @@
   "remark",
   "locationsource",
   "locationdestination",
+  "expired_date",
   "executor",
   "pic_execution",
   "status"
@@ -28,14 +30,16 @@
    "fieldtype": "Link",
    "label": "Item",
    "options": "Part Master",
-   "search_index": 1
+   "search_index": 1,
+   "sort_options": 1
   },
   {
    "fetch_from": "material_label_link.lotserial",
    "fieldname": "lotserial",
    "fieldtype": "Data",
    "label": "Lotserial",
-   "search_index": 1
+   "search_index": 1,
+   "sort_options": 1
   },
   {
    "fieldname": "qty_confirmation",
@@ -58,7 +62,8 @@
    "fetch_from": "material_label_link.line",
    "fieldname": "line_po",
    "fieldtype": "Int",
-   "label": "Line"
+   "label": "Line",
+   "sort_options": 1
   },
   {
    "fieldname": "executor",
@@ -81,8 +86,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Link To Material Label",
-   "options": "Material Label",
-   "reqd": 1
+   "options": "Material Label"
   },
   {
    "fetch_from": "item.description",
@@ -106,13 +110,24 @@
    "fieldtype": "Select",
    "label": "Reason",
    "options": "Barang Rusak\nSalah Label\nKurang dari Supplier\nLebih dari Supplier\nLainnya"
+  },
+  {
+   "fieldname": "expired_date",
+   "fieldtype": "Date",
+   "label": "Expired date"
+  },
+  {
+   "fieldname": "warehouse_task_link",
+   "fieldtype": "Link",
+   "label": "Warehouse Task Link",
+   "options": "Warehouse Task"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-01-04 19:13:48.311063",
+ "modified": "2026-01-27 13:16:23.819452",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Warehouse Task Detail",

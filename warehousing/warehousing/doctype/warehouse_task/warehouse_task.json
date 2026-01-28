@@ -10,6 +10,7 @@
   "task_type",
   "reference_doctype",
   "reference_name",
+  "column_break_epxl",
   "po_number",
   "status",
   "section_break_sfld",
@@ -49,7 +50,7 @@
    "fieldname": "task_type",
    "fieldtype": "Select",
    "label": "Task Type",
-   "options": "Picking\nPhysical Verification\nStock Transfer\nPutaway"
+   "options": "Picking\nPhysical Verification\nStock Transfer\nPutaway Transfer"
   },
   {
    "fieldname": "section_break_sfld",
@@ -64,7 +65,7 @@
   },
   {
    "fieldname": "date_instruction",
-   "fieldtype": "Data",
+   "fieldtype": "Date",
    "label": "Date Instruction"
   },
   {
@@ -97,12 +98,14 @@
    "label": "Reference Name"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
    "options": "Pending\nIn Progress\nCompleted\nCancelled"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "warehouse_task_detail",
    "fieldtype": "Table",
    "options": "Warehouse Task Detail"
@@ -151,12 +154,17 @@
    "fieldname": "durations",
    "fieldtype": "Data",
    "label": "Durations"
+  },
+  {
+   "fieldname": "column_break_epxl",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
+ "is_submittable": 1,
  "links": [],
- "modified": "2026-01-04 19:50:03.575329",
+ "modified": "2026-01-28 09:07:15.449187",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Warehouse Task",

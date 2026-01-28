@@ -10,19 +10,19 @@ LIST_PO = [{
         "line_detail": [
             {
                 "pod_line": 1,
-                "item_number": "ITEM-101",
-                "um": "kg",
+                "item_number": "16J708",
+                "um": "JR",
                 "item_net_weight": 17,
-                "item_description": "Wireless Mouse Logitech M185",
+                "item_description": "POP CORN OIL 18 L",
                 "qty_order": 150,
                 "qty_open": 150
             },
             {
                 "pod_line": 2,
-                "item_number": "ITEM-105",
-                "um": "ct",
+                "item_number": "137-124",
+                "um": "MT",
                 "item_net_weight": 25,
-                "item_description": "Mechanical Keyboard Rexus Legionare",
+                "item_description": "Label Mayflower Danish",
                 "qty_order": 200,
                 "qty_open": 200
             }
@@ -40,19 +40,19 @@ LIST_PO = [{
         "line_detail": [
             {
                 "pod_line": 1,
-                "item_number": "ITEM-201",
-                "um": "kg",
+                "item_number": "137-024",
+                "um": "PC",
                 "item_net_weight": 19,
-                "item_description": "Wireless Mouse Logitech M185",
+                "item_description": "Glue Label NB Lestari (SQ TIN 16.5 KG)",
                 "qty_order": 210,
                 "qty_open": 210
             },
             {
                 "pod_line": 2,
-                "item_number": "ITEM-205",
-                "um": "ct",
+                "item_number": "136-050",
+                "um": "RL",
                 "item_net_weight": 27,
-                "item_description": "Mechanical Keyboard Rexus Legionare",
+                "item_description": "White Plstc Roll Sachet",
                 "qty_order": 200,
                 "qty_open": 200
             }
@@ -70,19 +70,19 @@ LIST_PO = [{
         "line_detail": [
             {
                 "pod_line": 1,
-                "item_number": "ITEM-010",
-                "um": "kg",
+                "item_number": "100-401",
+                "um": "KG",
                 "item_net_weight": 45,
-                "item_description": "Wireless Mouse Logitech M185",
+                "item_description": "MBS01",
                 "qty_order": 210,
                 "qty_open": 210
             },
             {
                 "pod_line": 2,
-                "item_number": "ITEM-011",
-                "um": "ct",
+                "item_number": "137-124",
+                "um": "MT",
                 "item_net_weight": 30,
-                "item_description": "Mechanical Keyboard Rexus Legionare",
+                "item_description": "Label Mayflower Danish",
                 "qty_order": 200,
                 "qty_open": 200
             }

@@ -10,18 +10,48 @@ frappe.ui.form.on("Warehouse Task", {
         if (frm.doc.status === 'Completed') {
             
             // 1. Sembunyikan tombol Submit bawaan (jika ada)
-            frm.disable_save(); 
+            //frm.disable_save(); 
             
+            frm.add_custom_button(__('Display JSON'), function() {
+                frappe.call({
+                    method: "warehousing.warehousing.allAPI.po_receipt_JSON_Display",
+                    args: {
+                        parent_doc_name: cur_frm.doc.name,
+                        material_incoming_name: cur_frm.doc.reference_name
+                    },
+                    freeze: true,
+                    freeze_message: __("Sedang memproses PO Receipt JSON..."),
+                    callback: function(r) {
+                        if (r.message) {
+                            frappe.show_alert({ message: __(r.message.message), indicator: 'green' });
+                            dialog.hide();
+                        }
+                    }
+                });
+            }).addClass("btn-warning").removeClass("btn-default");
             // 2. Tambahkan tombol kustom "PO Receipt Confirm"
             frm.add_custom_button(__('PO Receipt Confirm'), function() {
                 
                 // Konfirmasi ke user sebelum eksekusi
                 frappe.confirm('Apakah Anda yakin ingin melakukan PO Receipt Confirmation ke QAD?', () => {
-                    // Panggil fungsi untuk integrasi ke QAD
-                    execute_qad_integration(frm);
+                   frappe.call({
+                        method: "warehousing.warehousing.allAPI.po_receipt_confirmation",
+                        args: {
+                            parent_doc_name: cur_frm.doc.name,
+                            material_incoming_name: cur_frm.doc.reference_name
+                        },
+                        freeze: true,
+                        freeze_message: __("Sedang memproses PO Receipt Confirmation..."),
+                        callback: function(r) {
+                            if (r.message.status === "failed") {
+                                frappe.show_alert({ message: __(r.message.message), indicator: 'red' });
+                                dialog.hide();
+                            }
+                        }
+                    });
                 });
 
-            }).addClass('btn-primary'); // Memberi warna biru pada tombol
+            }).addClass("btn-warning").removeClass("btn-default");
         }
  	},
     task_type: function(frm) {

@@ -12,7 +12,9 @@
   "lotserial",
   "pallet",
   "qty",
-  "barcode_fwrj"
+  "barcode_fwrj",
+  "last_printed_on",
+  "printed_by"
  ],
  "fields": [
   {
@@ -63,12 +65,23 @@
    "label": "Item",
    "options": "Part Master",
    "reqd": 1
+  },
+  {
+   "fieldname": "last_printed_on",
+   "fieldtype": "Datetime",
+   "label": "Last Printed On"
+  },
+  {
+   "fieldname": "printed_by",
+   "fieldtype": "Link",
+   "label": "Printed By",
+   "options": "User"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-02 23:00:57.051787",
+ "modified": "2026-01-19 18:21:35.662446",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Material Label",

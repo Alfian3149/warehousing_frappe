@@ -1,0 +1,113 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "hash",
+ "creation": "2026-01-15 13:50:29.843534",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_vjkc",
+  "site",
+  "part",
+  "lot_serial",
+  "reference",
+  "column_break_mnqd",
+  "qty_on_hand",
+  "qty_allocated",
+  "column_break_avig",
+  "warehouse_location",
+  "inventory_status",
+  "expire_date"
+ ],
+ "fields": [
+  {
+   "fieldname": "part",
+   "fieldtype": "Link",
+   "label": "Part",
+   "options": "Part Master"
+  },
+  {
+   "fieldname": "lot_serial",
+   "fieldtype": "Data",
+   "label": "Lot Serial"
+  },
+  {
+   "fieldname": "reference",
+   "fieldtype": "Data",
+   "label": "Reference"
+  },
+  {
+   "fieldname": "qty_on_hand",
+   "fieldtype": "Float",
+   "label": "Qty On Hand"
+  },
+  {
+   "fieldname": "qty_allocated",
+   "fieldtype": "Float",
+   "label": "Qty Allocated"
+  },
+  {
+   "fieldname": "expire_date",
+   "fieldtype": "Date",
+   "label": "Expire Date"
+  },
+  {
+   "fieldname": "inventory_status",
+   "fieldtype": "Data",
+   "label": "Inventory Status"
+  },
+  {
+   "fieldname": "warehouse_location",
+   "fieldtype": "Link",
+   "label": "Location",
+   "options": "Warehouse Location"
+  },
+  {
+   "default": "1000",
+   "fieldname": "site",
+   "fieldtype": "Data",
+   "label": "Site"
+  },
+  {
+   "fieldname": "section_break_vjkc",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_mnqd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_avig",
+   "fieldtype": "Column Break"
+  }
+ ],
+ "grid_page_length": 50,
+ "hide_toolbar": 1,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-01-22 15:21:07.103039",
+ "modified_by": "Administrator",
+ "module": "warehousing",
+ "name": "Inventory",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

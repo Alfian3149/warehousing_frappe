@@ -8,7 +8,10 @@
  "field_order": [
   "part_section",
   "part",
-  "description"
+  "um",
+  "description",
+  "qty_per_pallet",
+  "expire_date_required"
  ],
  "fields": [
   {
@@ -28,12 +31,28 @@
    "fieldname": "description",
    "fieldtype": "Small Text",
    "label": "Description"
+  },
+  {
+   "fieldname": "um",
+   "fieldtype": "Data",
+   "label": "UM"
+  },
+  {
+   "fieldname": "qty_per_pallet",
+   "fieldtype": "Int",
+   "label": "Qty Per Pallet"
+  },
+  {
+   "default": "0",
+   "fieldname": "expire_date_required",
+   "fieldtype": "Check",
+   "label": "Expire Date Required?"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-02 22:59:48.962774",
+ "modified": "2026-01-06 23:17:54.672711",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Part Master",

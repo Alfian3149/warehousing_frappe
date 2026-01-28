@@ -8,14 +8,23 @@
  "field_order": [
   "header_section",
   "naming_series",
+  "status",
+  "doc_status",
+  "submitted_date",
+  "printed_date",
+  "pv_assigned_date",
+  "confirmed_date",
+  "tf_assigned_date",
   "column_break_tkud",
   "purchase_order",
   "site",
-  "packing_slip",
   "column_break_xyzd",
   "order_date",
   "ship_date",
   "transaction_date",
+  "column_break_elbh",
+  "receiver",
+  "packing_slip",
   "supplier_and_delivery_information_section",
   "supplier",
   "supplier_address",
@@ -29,7 +38,32 @@
   "initiate_receipt_location",
   "section_break_tojq",
   "material_incoming_item",
-  "amended_from"
+  "amended_from",
+  "po_tracking_tab",
+  "po_tracking_html",
+  "tab_3_tab",
+  "physical_verification_id",
+  "go_to_verification_task",
+  "section_break_oggf",
+  "person_assigned",
+  "date_instruction_given",
+  "column_break_cznl",
+  "role_assigned",
+  "time_instruction_given",
+  "section_break_cwfr",
+  "physical_verification_html",
+  "receipt_info_tab",
+  "transfer_status_tab",
+  "putaway_transfer_task_id",
+  "go_to_putaway_transfer_task",
+  "section_break_khns",
+  "pt_person_assigned",
+  "pt_date_instruction_given",
+  "column_break_pclo",
+  "pt_role_assigned",
+  "pt_time_instruction_given",
+  "section_break_axbc",
+  "putaway_transfer_html"
  ],
  "fields": [
   {
@@ -51,7 +85,7 @@
   {
    "fieldname": "transaction_date",
    "fieldtype": "Date",
-   "label": "Transaction Date"
+   "label": "Receipt Date"
   },
   {
    "fieldname": "packing_slip",
@@ -100,8 +134,9 @@
   },
   {
    "fieldname": "initiate_receipt_location",
-   "fieldtype": "Data",
-   "label": "Initiate Receipt location"
+   "fieldtype": "Link",
+   "label": "Initiate Receipt location",
+   "options": "Warehouse Location"
   },
   {
    "fieldname": "section_break_tojq",
@@ -154,13 +189,188 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "\nDraft\nSubmitted\nPrinted\nAsiggned\nConfirmed\nTransferring\nCancelled",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_elbh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "receiver",
+   "fieldtype": "Data",
+   "label": "Receiver"
+  },
+  {
+   "fieldname": "physical_verification_id",
+   "fieldtype": "Link",
+   "label": "Physical Verification Task",
+   "options": "Warehouse Task"
+  },
+  {
+   "default": "0",
+   "fieldname": "doc_status",
+   "fieldtype": "Int",
+   "label": "Doc Status"
+  },
+  {
+   "fieldname": "po_tracking_tab",
+   "fieldtype": "Tab Break",
+   "label": "PO Tracking"
+  },
+  {
+   "fieldname": "po_tracking_html",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "tab_3_tab",
+   "fieldtype": "Tab Break",
+   "label": "Physical Verification Check"
+  },
+  {
+   "fieldname": "receipt_info_tab",
+   "fieldtype": "Tab Break",
+   "label": "Receipt Info"
+  },
+  {
+   "fieldname": "transfer_status_tab",
+   "fieldtype": "Tab Break",
+   "label": "Transfer Status"
+  },
+  {
+   "fieldname": "person_assigned",
+   "fieldtype": "Link",
+   "label": "Person Assigned",
+   "options": "User"
+  },
+  {
+   "fieldname": "date_instruction_given",
+   "fieldtype": "Date",
+   "label": "Date Instruction Given"
+  },
+  {
+   "fieldname": "column_break_cznl",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "role_assigned",
+   "fieldtype": "Link",
+   "label": "Role Assigned",
+   "options": "Role"
+  },
+  {
+   "fieldname": "time_instruction_given",
+   "fieldtype": "Time",
+   "label": "Time"
+  },
+  {
+   "fieldname": "section_break_oggf",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "physical_verification_html",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "submitted_date",
+   "fieldtype": "Datetime",
+   "hidden": 1,
+   "label": "Submitted Date"
+  },
+  {
+   "fieldname": "printed_date",
+   "fieldtype": "Datetime",
+   "hidden": 1,
+   "label": "Printed Date"
+  },
+  {
+   "fieldname": "pv_assigned_date",
+   "fieldtype": "Datetime",
+   "hidden": 1,
+   "label": "PV Assigned Date"
+  },
+  {
+   "fieldname": "confirmed_date",
+   "fieldtype": "Datetime",
+   "hidden": 1,
+   "label": "Confirmed Date"
+  },
+  {
+   "fieldname": "tf_assigned_date",
+   "fieldtype": "Datetime",
+   "hidden": 1,
+   "label": "TF Assigned Date"
+  },
+  {
+   "fieldname": "section_break_cwfr",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "go_to_verification_task",
+   "fieldtype": "Button",
+   "label": "Go to verification task"
+  },
+  {
+   "fieldname": "putaway_transfer_task_id",
+   "fieldtype": "Link",
+   "label": "Putaway Transfer Task",
+   "options": "Warehouse Task"
+  },
+  {
+   "fieldname": "go_to_putaway_transfer_task",
+   "fieldtype": "Button",
+   "label": "Go to putaway transfer task"
+  },
+  {
+   "fieldname": "section_break_khns",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "pt_person_assigned",
+   "fieldtype": "Link",
+   "label": "Person Assigned",
+   "options": "User"
+  },
+  {
+   "fieldname": "pt_date_instruction_given",
+   "fieldtype": "Date",
+   "label": "Date Instruction Given"
+  },
+  {
+   "fieldname": "column_break_pclo",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "pt_role_assigned",
+   "fieldtype": "Link",
+   "label": "Role Assigned",
+   "options": "Role"
+  },
+  {
+   "fieldname": "pt_time_instruction_given",
+   "fieldtype": "Time",
+   "label": "Time"
+  },
+  {
+   "fieldname": "section_break_axbc",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "putaway_transfer_html",
+   "fieldtype": "HTML",
+   "label": "physical_verification_html"
   }
  ],
  "grid_page_length": 50,
+ "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
- "is_submittable": 1,
  "links": [],
- "modified": "2025-12-19 08:22:49.215452",
+ "modified": "2026-01-24 17:29:11.249080",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Material Incoming",

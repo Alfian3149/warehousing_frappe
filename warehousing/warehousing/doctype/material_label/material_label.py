@@ -6,16 +6,33 @@ from frappe.model.document import Document
 from frappe.model.naming import getseries
 from frappe.utils import getdate, nowdate
 import frappe
-class MaterialLabel(Document):
-	def auto_name(self):
-		today = getdate(nowdate())
-		month = today.strftime("%m")
-		year  = today.strftime("%y")
-	
-		label_prefix = f"LBL-{month}{year}-"
-		label_running_number = getseries(label_prefix, 4)
-		self.name = f"{month}{year}-{label_running_number}"
+import json
+from frappe import _
+import base64
+import io
+import pyqrcode
 
+class MaterialLabel(Document):
+    def auto_name(self):
+        today = getdate(nowdate())
+        month = today.strftime("%m")
+        year = today.strftime("%y")
+
+        label_prefix = f"LBL-{month}{year}-"
+        label_running_number = getseries(label_prefix, 4)
+        self.name = f"{month}{year}-{label_running_number}"
+
+    def before_print(self):
+        # Logika ini otomatis terpanggil saat tombol Print ditekan
+        self.last_printed_on = frappe.utils.now_datetime()
+        self.printed_by = frappe.session.user
+        
+        # Gunakan db_set agar data tersimpan tanpa memicu validasi berulang
+        self.db_set("last_printed_on", self.last_printed_on)
+        self.db_set("printed_by", self.printed_by)
+        
+        # Opsional: Beri pesan di timeline
+        self.add_comment("Info", f"Label di-render untuk dicetak oleh {self.printed_by}")
 
 @frappe.whitelist()
 def sync_material_labels(data, parent_doc_name):
@@ -63,3 +80,51 @@ def sync_material_labels(data, parent_doc_name):
 
     frappe.db.commit()
     return {"status": "success", "message": "Sinkronisasi Berhasil"}
+ 
+@frappe.whitelist()
+def generate_bulk_print_html(docnames):
+    # 1. Parsing docnames jika dikirim sebagai string JSON
+    if isinstance(docnames, str):
+        docnames = json.loads(docnames)
+
+    # 2. Ambil semua data dokumen
+    docs_data = []
+    for name in docnames:
+        
+        if frappe.db.exists("Material Label", name):
+            doc = frappe.get_doc("Material Label", name)
+            
+            # 1. Ambil Deskripsi dari Link Item
+            doc.item_description = frappe.db.get_value("Part Master", doc.item, "description") or ""
+            doc.item_um = frappe.db.get_value("Part Master", doc.item, "um") or ""
+           # 2. Generate QR Code menggunakan pyqrcode
+            qr = pyqrcode.create(doc.item + "#" + doc.lotserial)
+            
+            # Simpan ke buffer memori sebagai PNG
+            buffer = io.BytesIO()
+            qr.png(buffer, scale=6) # scale=6 menghasilkan resolusi yang cukup tajam
+            
+            # Konversi ke Base64
+            img_str = base64.b64encode(buffer.getvalue()).decode()
+            doc.qr_base64 = f"data:image/png;base64,{img_str}"
+            
+            docs_data.append(doc)
+
+
+ 
+    if not docs_data:
+        frappe.throw(_("No valid documents found to print"))
+
+    frappe.db.sql("""
+        update `tabMaterial Label` 
+        set printed_by = %s, last_printed_on = %s 
+        where name in %s
+    """, (frappe.session.user, frappe.utils.now_datetime(), docnames))
+
+    # 4. Panggil file HTML eksternal dan render dengan Jinja2
+    # Pastikan path 'templates/bulk_label.html' sesuai lokasi file Anda
+    html_template = frappe.get_template("warehousing/templates/bulk_label.html").render({
+        "docs": docs_data
+    })
+
+    return html_template

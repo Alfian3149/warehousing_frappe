@@ -64,8 +64,7 @@ def soapRequest():
     headers = {
       'Content-Type': 'text/xml; charset=utf-8',
       'SOAPAction': '""'
-    }
-
+    } 
     #response = frappe.make_post_request(url, headers=headers, data=payload)
     response = requests.request("POST", url, headers=headers, data=payload)
     soup = BeautifulSoup(response.text, 'xml')

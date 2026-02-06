@@ -13,6 +13,10 @@
   "is_active",
   "column_break_knnd",
   "parent_warehouse_location",
+  "total_capacity",
+  "um",
+  "section_break_izbu",
+  "status",
   "section_break_hg9h",
   "lft",
   "rgt",
@@ -89,13 +93,34 @@
    "fieldname": "is_active",
    "fieldtype": "Check",
    "label": "Is Active?"
+  },
+  {
+   "fieldname": "total_capacity",
+   "fieldtype": "Float",
+   "label": "Total Capacity"
+  },
+  {
+   "fieldname": "um",
+   "fieldtype": "Link",
+   "label": "UM",
+   "options": "Uom"
+  },
+  {
+   "fieldname": "section_break_izbu",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Available\nReserved\nOccupied"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_tree": 1,
  "links": [],
- "modified": "2026-01-22 22:17:15.872576",
+ "modified": "2026-02-03 07:40:54.471903",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Warehouse Location",

@@ -6,110 +6,6 @@ import time
 from bs4 import BeautifulSoup 
 from warehousing.warehousing.doctype.inventory.inventory import update_inventory_qty
 import xml.etree.ElementTree as ET
- 
-@frappe.whitelist()
-def get_simulated_picklist_item(site, part, qty, domain):
-    import xml.etree.ElementTree as ET
-    time.sleep(1)
-    if not part:
-        frappe.throw(_("Part harus diisi"))
-        return
-    input_data = {
-        "ttip_table": [
-            {
-                "ttip_parent": part,
-                "ttip_site": site,
-                "ttip_qty": qty
-            }
-        ]
-    }
-
-    data = json.dumps(input_data)
-
-    #url = "http://smii.qad:24079/wsa/smiiwsa"
-    url = "http://127.0.0.1:24079/wsa/smiiwsa"
-    payload = f"""<?xml version="1.0" encoding="utf-8"?>
-    <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-    <soap:Body>
-        <zzbmpkcc xmlns="urn:services-qad-com:smiiwsa:0001:smiiwsa">
-        <domain>{domain}</domain>
-        <ipdataset_parentItem>{data}</ipdataset_parentItem>
-        <ipdataset_materialItem>?</ipdataset_materialItem>
-        </zzbmpkcc>
-    </soap:Body>
-    </soap:Envelope>"""
-    headers = {
-    'Content-Type': 'text/xml; charset=utf-8',
-    'SOAPAction': '""'
-    }
-
-    try:
-        response = requests.post(url, data=payload, headers=headers)
-
-        if response.status_code == 200:
-            xml_response = response.text
-            try:
-                root = ET.fromstring(xml_response)
-                for result in root.iter():
-                    if 'oplcdatadetail' in result.tag:
-                        dataResponse = json.loads(result.text)
-                        return dataResponse
-            except Exception:
-                frappe.throw(_("Gagal membaca respon JSON dari QAD"))
-        else:
-            frappe.throw(_("Koneksi ke QAD Gagal: {0}").format(response.status_code))
-
-    except Exception as e:
-        frappe.log_error(frappe.get_traceback(), "QAD Get Simulated Picklist API Error")
-        frappe.throw(_("Terjadi kesalahan saat menghubungi QAD: {0}").format(str(e)))
-
-
-@frappe.whitelist()
-def get_workorder_from_qad(work_order, domain): 
-    time.sleep(1)
-    if not work_order:
-        frappe.throw(_("Work Order harus diisi"))
-        return
-    input_data = {
-        "dsWOInput": {
-            "ttWORequest": [
-                {
-                    "domain_filter": domain,
-                    "wonbr_filter": work_order
-                }
-            ]
-        }
-    }
-    data = json.dumps(input_data)
-
-    #url = "http://smii.qad:24079/wsa/smiiwsa"
-    url = "http://127.0.0.1:24079/wsa/smiiwsa"
-    payload = f"""<?xml version="1.0" encoding="utf-8"?>
-    <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-    <soap:Body>
-        <zzGetWorkOrder xmlns="urn:services-qad-com:smiiwsa:0001:smiiwsa">
-        <ipDatasetRequest>{data}</ipDatasetRequest>
-        </zzGetWorkOrder>
-    </soap:Body>
-    </soap:Envelope>"""
-    headers = {
-    'Content-Type': 'text/xml; charset=utf-8',
-    'SOAPAction': '""'
-    }
-
-    try:
-        response = requests.post(url, data=payload, headers=headers)
-
-        if response.status_code == 200:
-            dataResponse = parse_qad_response(response.text)
-            return dataResponse
-        else:
-            frappe.throw(_("Koneksi ke QAD Gagal: {0}").format(response.status_code))
-
-    except Exception as e:
-        frappe.log_error(frappe.get_traceback(), "QAD Get Work Order API Error")
-        frappe.throw(_("Terjadi kesalahan saat menghubungi QAD: {0}").format(str(e)))
-
 
 @frappe.whitelist()
 def get_po_from_qad(po_number=None, domain="SMII"): 
@@ -149,9 +45,7 @@ def get_po_from_qad(po_number=None, domain="SMII"):
         response = requests.post(url, data=payload, headers=headers)
 
         if response.status_code == 200:
-            dataResponse = parse_qad_response(response.text)
-            
-            return dataResponse
+            return parse_qad_response(response.text)
         else:
             frappe.throw(_("Koneksi ke QAD Gagal: {0}").format(response.status_code))
 
@@ -272,99 +166,74 @@ def po_receipt_confirmation(parent_doc_name, material_incoming_name):
     'Content-Type': 'text/xml; charset=utf-8',
     'SOAPAction': '""'
     }
-    # Inisialisasi variabel awal
-    receiver = None
-    isNotOk = "false"
-    errorMsg = ""
-    
-    # 1. Buat Draft Integration Request untuk Logging
-    int_log = frappe.get_doc({
-        "doctype": "Integration Request",
-        "integration_request_service": "QAD PO API",
-        "url": url,
-        "data": json.dumps(payload, indent=4) if isinstance(payload, (dict, list)) else payload,
-        "status": "Queued",
-        "reference_doctype": "Warehouse Task",
-        "reference_name": parent_doc_name
-    })
-    int_log.insert(ignore_permissions=True)
-
     try:
-        response = requests.request("POST", url, data=payload, headers=headers, timeout=30)
-        int_log.output = response.text # Simpan respon mentah
-
+        #response = frappe.make_post_request(url, headers=headers, data=payload) 
+        response = requests.request("POST", url, data=payload, headers=headers)
+ 
         if response.status_code == 200:
             root = ET.fromstring(response.text)
             namespaces = {'qad': 'urn:services-qad-com:smiiwsa:0001:smiiwsa'}
-            
             oplc_element = root.find('.//qad:oplcdataset', namespaces)
-            opnotok_element = root.find('.//qad:opnotok', namespaces)
-            operror_element = root.find('.//qad:operror', namespaces)
             errmessage_element = root.find('.//qad:errmessage', namespaces)
-
-            # Logika Jika Sukses (Ada Data)
-            if oplc_element is not None and oplc_element.text:
-                data_dict = json.loads(oplc_element.text)
+            operror_element = root.find('.//qad:operror', namespaces)
+            opnotok_element = root.find('.//qad:opnotok', namespaces)
+            receiver = None
+            if oplc_element is not None:
+                json_str = oplc_element.text
+                data_dict = json.loads(json_str)
                 transactionSuccess = data_dict.get("ttLotserialTrhist", [])
-                isNotOk = str(data_dict.get("opnotok", "false")).lower()
-                
-                if isNotOk == "false":
-                    for d in transactionSuccess:
-                        receiver = d.get("receiver")
-                        d_site = d.get("site") or "1000"
-                        # Fungsi update_inventory_qty pastikan sudah terimport
-                        update_inventory_qty(
-                            "Warehouse Task", parent_doc_name, "RCT-PO", d.get("effdate"), 
-                            d_site, d.get("part"), d.get("lotserial"), d.get("ref"), 
-                            d.get("location"), d.get("qty"), d.get("ldstatus"), 
-                            d.get("expire"), d.get("ponumber"), int(d.get("poline", 0))
-                        )
-                    int_log.status = "Completed"
 
-            # Logika Jika Error dari QAD
-            if opnotok_element is not None:
-                isNotOk = opnotok_element.text.strip().lower()
-                errorMsg = operror_element.text if operror_element is not None else "Unknown Error"
-                
-                if isNotOk == "true":
-                    int_log.status = "Failed"
-                    error_temp = []
-                    if errmessage_element is not None and errmessage_element.text:
-                        try:
-                            err_data = json.loads(errmessage_element.text)
-                            error_temp = err_data.get("temp_err_msg", [])
-                        except:
-                            error_temp = errmessage_element.text
-
-                    log_data = {
-                        "request_payload": payload,
-                        "error_message": error_temp,
-                        "qad_error_msg": errorMsg
+                """ print("========== QAD RESPONSE DATA =============")
+                print(data_dict)
+                print("=========================================")
+                print(transactionSuccess) """
+                log_data = {
+                        "request_payload": data,
+                        "response_received": response.text,
+                        "error_message":error_temp
                     }
-                    
-                    frappe.log_error(
-                        title=f"ERROR: WAREHOUSE TASK {parent_doc_name}",
-                        message=json.dumps(log_data, indent=4)
-                    )
 
-            int_log.save(ignore_permissions=True)
-            frappe.db.commit()
+                frappe.log_error(
+                        title="ERROR: API REQUEST " + parent_doc_name ,
+                        message=json.dumps(log_data, indent=4)
+                )
+
+                isNotOk = data_dict.get("opnotok")
+                errorMsg = data_dict.get("operror")
+                if isNotOk == "false" :
+                    for data in transactionSuccess : 
+                        receiver = data["receiver"]
+                        data_site = data["site"] if data["site"] else "1000"
+                        update_inventory_qty("Warehouse Task", parent_doc_name, "RCT-PO", data["effdate"], data_site, data["part"], data["lotserial"], data["ref"], data["location"], data["qty"], data["ldstatus"], data["expire"], data["ponumber"], int(data["poline"]))
+
+            if opnotok_element is not None:
+                isNotOk = opnotok_element.text.lower()
+                errorMsg = operror_element.text
+                if isNotOk == "true" : 
+                    json_str = errmessage_element.text
+                    data_dict = json.loads(json_str)
+                    error_temp = data_dict.get("temp_err_msg", [])
+                    if error_temp is not None :
+                        log_data = {
+                            "request_payload": data,
+                            "response_received": response.text,
+                            "error_message":error_temp
+                        }
+
+                    frappe.log_error(
+                            title="ERROR: WAREHOUSE TASK " + parent_doc_name ,
+                            message=json.dumps(log_data, indent=4)
+                    )
 
             return {
                 "receiver": receiver,
                 "status": "failed" if isNotOk == "true" else "success",
-                "message": errorMsg if isNotOk == "true" else None,
+                "message ": errorMsg if isNotOk == "true" else None,
             }
         else:
-            int_log.status = "Failed"
-            int_log.save()
             frappe.throw(_("Koneksi ke QAD Gagal: {0}").format(response.status_code))
 
     except Exception as e:
-        frappe.db.rollback()
-        int_log.status = "Failed"
-        int_log.error_log = frappe.get_traceback()
-        int_log.save(ignore_permissions=True)
         frappe.log_error(frappe.get_traceback(), "QAD Get PO API Error")
         frappe.throw(_("Terjadi kesalahan saat menghubungi QAD: {0}").format(str(e)))
     

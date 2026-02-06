@@ -10,8 +10,10 @@
   "part",
   "um",
   "description",
-  "qty_per_pallet",
-  "expire_date_required"
+  "column_break_mpih",
+  "expire_date_required",
+  "automatic_create_lotserial",
+  "qty_per_pallet"
  ],
  "fields": [
   {
@@ -47,12 +49,22 @@
    "fieldname": "expire_date_required",
    "fieldtype": "Check",
    "label": "Expire Date Required?"
+  },
+  {
+   "fieldname": "column_break_mpih",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "automatic_create_lotserial",
+   "fieldtype": "Check",
+   "label": "Automatic create lot/serial"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-06 23:17:54.672711",
+ "modified": "2026-02-05 18:42:53.657901",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Part Master",

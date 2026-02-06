@@ -9,17 +9,19 @@
  "field_order": [
   "naming_series",
   "pod_line",
-  "item_number",
-  "um",
-  "qty_per_pallet",
-  "item_description",
+  "qty_open",
   "qty_order",
   "qty_received",
-  "qty_open",
+  "column_break_nubl",
+  "item_number",
+  "um",
   "qty_to_receive",
+  "qty_per_pallet",
+  "total_label",
+  "column_break_mjpj",
+  "item_description",
   "expired_date",
   "location_to_receive",
-  "total_label",
   "requisition",
   "label_calculation"
  ],
@@ -50,8 +52,10 @@
   {
    "fieldname": "naming_series",
    "fieldtype": "Select",
+   "hidden": 1,
    "label": "Master ID",
-   "options": "MTL-INC-ITM-.YYYY.-"
+   "options": "MTL-INC-ITM-.YYYY.-",
+   "read_only": 1
   },
   {
    "fieldname": "location_to_receive",
@@ -111,13 +115,21 @@
    "fieldname": "qty_received",
    "fieldtype": "Float",
    "label": "Qty Received"
+  },
+  {
+   "fieldname": "column_break_nubl",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_mjpj",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-01-22 10:05:07.574000",
+ "modified": "2026-01-28 18:30:02.280823",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Material Incoming Item",

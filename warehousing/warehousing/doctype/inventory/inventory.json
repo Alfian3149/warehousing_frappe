@@ -11,9 +11,11 @@
   "part",
   "lot_serial",
   "reference",
+  "printed_by",
+  "last_printed_on",
   "column_break_mnqd",
   "qty_on_hand",
-  "qty_allocated",
+  "qty_reserverd",
   "column_break_avig",
   "warehouse_location",
   "inventory_status",
@@ -40,11 +42,6 @@
    "fieldname": "qty_on_hand",
    "fieldtype": "Float",
    "label": "Qty On Hand"
-  },
-  {
-   "fieldname": "qty_allocated",
-   "fieldtype": "Float",
-   "label": "Qty Allocated"
   },
   {
    "fieldname": "expire_date",
@@ -79,13 +76,29 @@
   {
    "fieldname": "column_break_avig",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "printed_by",
+   "fieldtype": "Link",
+   "label": "Last Printed By",
+   "options": "User"
+  },
+  {
+   "fieldname": "last_printed_on",
+   "fieldtype": "Datetime",
+   "label": "Last Printed On"
+  },
+  {
+   "fieldname": "qty_reserverd",
+   "fieldtype": "Float",
+   "label": "Qty Reserved"
   }
  ],
  "grid_page_length": 50,
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-22 15:21:07.103039",
+ "modified": "2026-02-05 16:48:21.971903",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Inventory",

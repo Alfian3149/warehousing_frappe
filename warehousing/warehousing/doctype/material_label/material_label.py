@@ -82,35 +82,89 @@ def sync_material_labels(data, parent_doc_name):
     return {"status": "success", "message": "Sinkronisasi Berhasil"}
  
 @frappe.whitelist()
-def generate_bulk_print_html(docnames):
-    # 1. Parsing docnames jika dikirim sebagai string JSON
+def generate_bulk_print_html(docnames, doctype):
     if isinstance(docnames, str):
         docnames = json.loads(docnames)
 
-    # 2. Ambil semua data dokumen
+    # Definisi mapping: "Standard Name": "Field Name di DocType"
+    mapping_config = {
+        "Material Label": {
+            "item": "item",
+            "lot": "lotserial",
+            "qty": "qty"
+        },
+        "Inventory": {
+            "item": "part", 
+            "lot": "lot_serial",
+            "qty": "qty_on_hand"
+        }
+    }
+
+    # Ambil config sesuai doctype yang dikirim
+    config = mapping_config.get(doctype)
+    if not config:
+        frappe.throw(_("Mapping untuk DocType {0} belum dikonfigurasi").format(doctype))
+
+    docs_data = []
+    for name in docnames:
+        if frappe.db.exists(doctype, name):
+            source_doc = frappe.get_doc(doctype, name)
+            
+            # Buat objek baru (Bunch/Dict) agar template HTML seragam
+            # Ini teknik "Aliasing" agar di HTML tetap panggil {{ doc.item }}
+            processed_doc = frappe._dict({
+                "name": source_doc.name,
+                "item": source_doc.get(config["item"]),
+                "lotserial": source_doc.get(config["lot"]),
+                "qty": source_doc.get(config["qty"]),
+                "doctype": doctype
+            })
+
+            # Ambil data tambahan dari Part Master
+            item_info = frappe.db.get_value("Part Master", processed_doc.item, ["description", "um"], as_dict=1)
+            processed_doc.item_description = item_info.description if item_info else ""
+            processed_doc.item_um = item_info.um if item_info else ""
+
+            # Generate QR Code menggunakan field standar
+            qr_content = f"{processed_doc.item}#{processed_doc.lotserial}"
+            qr = pyqrcode.create(qr_content)
+            
+            buffer = io.BytesIO()
+            qr.png(buffer, scale=6)
+            img_str = base64.b64encode(buffer.getvalue()).decode()
+            processed_doc.qr_base64 = f"data:image/png;base64,{img_str}"
+            
+            docs_data.append(processed_doc)
+
+    # Update Log Cetak
+    frappe.db.sql(f"update `tab{doctype}` set printed_by = %s, last_printed_on = %s where name in %s", 
+                 (frappe.session.user, frappe.utils.now_datetime(), tuple(docnames)))
+
+    return frappe.get_template("warehousing/templates/bulk_label.html").render({
+        "docs": docs_data
+    })
+
+
+def generate_bulk_print_html_copy(docnames):
+    if isinstance(docnames, str):
+        docnames = json.loads(docnames)
+
     docs_data = []
     for name in docnames:
         
         if frappe.db.exists("Material Label", name):
             doc = frappe.get_doc("Material Label", name)
-            
-            # 1. Ambil Deskripsi dari Link Item
             doc.item_description = frappe.db.get_value("Part Master", doc.item, "description") or ""
             doc.item_um = frappe.db.get_value("Part Master", doc.item, "um") or ""
-           # 2. Generate QR Code menggunakan pyqrcode
             qr = pyqrcode.create(doc.item + "#" + doc.lotserial)
             
-            # Simpan ke buffer memori sebagai PNG
             buffer = io.BytesIO()
             qr.png(buffer, scale=6) # scale=6 menghasilkan resolusi yang cukup tajam
-            
-            # Konversi ke Base64
+
             img_str = base64.b64encode(buffer.getvalue()).decode()
             doc.qr_base64 = f"data:image/png;base64,{img_str}"
             
             docs_data.append(doc)
-
-
  
     if not docs_data:
         frappe.throw(_("No valid documents found to print"))
@@ -120,9 +174,7 @@ def generate_bulk_print_html(docnames):
         set printed_by = %s, last_printed_on = %s 
         where name in %s
     """, (frappe.session.user, frappe.utils.now_datetime(), docnames))
-
-    # 4. Panggil file HTML eksternal dan render dengan Jinja2
-    # Pastikan path 'templates/bulk_label.html' sesuai lokasi file Anda
+ 
     html_template = frappe.get_template("warehousing/templates/bulk_label.html").render({
         "docs": docs_data
     })

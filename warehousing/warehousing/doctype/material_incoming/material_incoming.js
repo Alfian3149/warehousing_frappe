@@ -194,10 +194,6 @@ frappe.ui.form.on("Material Incoming", {
                 size: 'large',
                 secondary_action_label: __("Print"),
                 secondary_action() {
-                    //let selected_ids = ["6gg8fr6chg", "6ggcdq0ad7"];
-                    //window.open(`/printview?doctype=Material Label&name=${JSON.stringify(selected_ids)}&format=Label Barcode`);
-                    //let url = "/printview?doctype=Material%20Label&name=${JSON.stringify(selected_ids)}&format=Label%20Barcode&no_letterhead=1&trigger_print=1";
-                    //window.open(url, "_blank");
                     const items = dialog.get_values().xx_material_incoming_item;
                     
                     const grid = dialog.get_field('xx_material_incoming_item').grid;
@@ -343,7 +339,7 @@ frappe.ui.form.on("Material Incoming", {
                 }
             });
             dialog.show();
-        }, __("Verification"));
+        }, __("Labeling & Verification"));
 
         frm.add_custom_button(__('Assign Physical Verification'), function() {
             if (ds === 0) {
@@ -447,7 +443,7 @@ frappe.ui.form.on("Material Incoming", {
                 d.get_primary_btn().hide();
             }
             d.show();
-        }, __("Verification"));
+        }, __("Labeling & Verification"));
 
         // --- GRUP 2: RECEIPT & PUTAWAY ---
         frm.add_custom_button(__('Confirm PO Receipt'), function() {
@@ -467,6 +463,7 @@ frappe.ui.form.on("Material Incoming", {
                             dialog.hide();
                         }
                         else {
+                            frm.set_value('receiver', r.message.receiver);
                             frm.set_value('confirmed_date', frappe.datetime.now_datetime());
                             frm.set_value('status', 'Confirmed');
                             frm.save().then(() => {
@@ -648,21 +645,14 @@ frappe.ui.form.on("Material Incoming", {
                 callback: function(r) {
                     if (r.message) {
                         let data = r.message.dsPOResponse;
-
-                        if (data.ttpo_mstr && data.ttpo_mstr.length > 0) {
-                            let header = data.ttpo_mstr[0];
-                            
-                            frm.set_value("site", header.posite);
-                            frm.set_value("order_date", header.po_orddate);
-                            frm.set_value("supplier", header.povend);
-                            frm.set_value("supplier_address", header.line1_vend + "\n" + header.line2_vend + "\n" + header.line3_vend);
-                            frm.set_value("shipto", header.addr_ship);
-                            frm.set_value("shipto_address", header.line1_ship + "\n" + header.line2_ship + "\n" + header.line3_ship);
-                        }
                         frm.clear_table('material_incoming_item');
 
                         if (data.ttpod_det && data.ttpod_det.length > 0) {
                             data.ttpod_det.forEach(row => {
+                                if (row.pt_qtypallet == 0){ 
+                                    frappe.msgprint(__("Qty per Pallet untuk item {0} tidak boleh nol. Silakan periksa kembali data PO di QAD.", [row.podpart]));
+                                    return;
+                                }
                                 let child = frm.add_child('material_incoming_item');
                                 child.pod_line = row.podline;
                                 child.item_number = row.podpart;
@@ -674,6 +664,17 @@ frappe.ui.form.on("Material Incoming", {
                                 child.qty_received = row.pod_qtyrcvd;
                                 child.requisition = row.pod_reqnbr;
                             });
+                        }
+
+                        if (data.ttpo_mstr && data.ttpo_mstr.length > 0) {
+                            let header = data.ttpo_mstr[0];
+                            
+                            frm.set_value("site", header.posite);
+                            frm.set_value("order_date", header.po_orddate);
+                            frm.set_value("supplier", header.povend);
+                            frm.set_value("supplier_address", header.line1_vend + "\n" + header.line2_vend + "\n" + header.line3_vend);
+                            frm.set_value("shipto", header.addr_ship);
+                            frm.set_value("shipto_address", header.line1_ship + "\n" + header.line2_ship + "\n" + header.line3_ship);
                         }
 
                         frm.refresh_field('material_incoming_item');
@@ -735,14 +736,13 @@ frappe.ui.form.on("Material Incoming", {
             freeze_message: __("Creating Warehouse Task..."),
             callback: function(r) {
                 if (r.message.status === "success") {  
-                    frm.set_value('tf_assigned_date', frappe.datetime.now_datetime());   
-                    frm.set_value('putaway_transfer_task_id', r.message.name);
-                    //frm.set_value('status', 'Asiggned');
-                    frm.set_value('pt_person_assigned', assign_to_person);
-                    frm.set_value('pt_role_assigned', assign_to_role);
-                    frm.set_value('pt_date_instruction_given', date_instruction);
-                    frm.set_value('pt_time_instruction_given', time_transaction);
-                    // Simpan dokumen secara otomatis
+                    frm.set_value('pv_assigned_date', frappe.datetime.now_datetime());   
+                    frm.set_value('physical_verification_id', r.message.name);
+                    frm.set_value('status', 'Asiggned');
+                    frm.set_value('person_assigned', assign_to_person);
+                    frm.set_value('role_assigned', assign_to_role);
+                    frm.set_value('date_instruction_given', date_instruction);
+                    frm.set_value('time_instruction_given', time_transaction);
                     frm.save() 
                     // MEMBUKA FORM DALAM POP-UP (Quick Entry Mode)
                     frappe.ui.form.make_quick_entry("Warehouse Task", null, null, r.message.name);
@@ -985,7 +985,8 @@ function print_selected_labels(label_ids) {
     frappe.call({
         method: "warehousing.warehousing.doctype.material_label.material_label.generate_bulk_print_html",
         args: {
-            docnames: label_ids
+            docnames: label_ids,
+            doctype: "Material Label"
         },
         freeze: true,
         freeze_message: __("Preparing Labels..."),

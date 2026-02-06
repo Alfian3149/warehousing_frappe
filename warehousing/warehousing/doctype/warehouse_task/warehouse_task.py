@@ -135,42 +135,21 @@ def create_putaway_transfer_task(source_doc, task_type, assigned_to_person=None,
     
     grouped_data = {}
 
-    # Copy data Child Table secara otomatis
-    for detail in Warehouse_Task.warehouse_task_detail:
-        key = (detail.part)
-        if key not in grouped_data:
-            # Jika grup belum ada, inisialisasi dengan nilai awal
-            grouped_data[key] = {
-                "part": detail.part,
-                "count_record": 0
-            }
-        grouped_data[key]["count_record"] += 1
-        
-    for group in grouped_data : 
-        putaway_location = get_multi_bin_suggestion("1000", group.item, group.count_record)
+    for task_detail in Warehouse_Task.warehouse_task_detail:
+        new_task.append("warehouse_task_detail", {
+            "warehouse_task_link": task_detail.name,
+            "line_po": task_detail.line_po,
+            "item": task_detail.item, 
+            "description": task_detail.description,
+            "lotserial": task_detail.lotserial,
+            "qty_label": task_detail.qty_confirmation,
+            "expired_date": task_detail.expired_date,
+            "status": "Pending",
+            "locationsource": task_detail.locationdestination,
+            "locationdestination":task_detail.locationdestination,
+        })
 
-        Warehouse_Task_Detail = frappe.get_all("Warehouse Task Detail", filters={
-        "parent": Warehouse_Task.name,    # ID dokumen induk
-        "part": group.part      # Filter part spesifik
-        }, fields=["name", "item", "description", "lotserial", "line_po", "qty_confirmation", "expired_date", "locationdestination"])
-        
-        for task_detail in Warehouse_Task_Detail : 
-            new_task.append("warehouse_task_detail", {
-                "warehouse_task_link": task_detail.name,
-                "line_po": task_detail.line_po,
-                "item": task_detail.item, 
-                "description": task_detail.description,
-                "lotserial": task_detail.lotserial,
-                "qty_label": task_detail.qty_confirmation,
-                "expired_date": task_detail.expired_date,
-                "status": "Pending",
-                "locationsource": task_detail.locationdestination,
-                "locationdestination":task_detail.locationdestination,
-            })
-
-
-    new_task.insert() # Simpan ke database
-
+    new_task.insert() #
     frappe.db.commit()
     return {
          "status": "success",

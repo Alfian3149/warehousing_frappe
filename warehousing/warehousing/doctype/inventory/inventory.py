@@ -89,8 +89,6 @@ def update_inventory_qty(doctype, doctype_link, transType, postingDate, site, pa
         current_qty = 0
         name = None
 
-    
-    current_qty = inventory.qty_on_hand if inventory else 0
     new_balance =  flt(current_qty) + flt(qty_change) if in_out == "IN" else flt(current_qty) - flt(qty_change)
 
     # Buat Stock Ledger (Riwayat)

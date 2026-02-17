@@ -73,8 +73,10 @@ frappe.ui.form.on('Warehouse Task Detail', {
     // Trigger saat baris ditambah
     warehouse_task_detail_add: function(frm) {
         update_parent_status(frm);
-    }
+    },
+
 });
+
 
 // Fungsi pembantu untuk mengecek status semua baris
 var update_parent_status = function(frm) {
@@ -97,51 +99,151 @@ var update_parent_status = function(frm) {
 };
 
 frappe.ui.form.on('Warehouse Task Detail', {
-    // Trigger saat kolom qty_confirmation diubah
     qty_confirmation: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
+        if (row._resetting) return;
+        check_discrepancy(frm, row, function() {
+            target_location_confirmation(frm, row);
+            frappe.model.set_value(cdt, cdn, 'status', 'Completed');
+        }
+    );
 
-        // Validasi: Jika input tidak kosong dan tidak sama dengan qty_label
-        if (row.qty_confirmation != undefined && row.qty_confirmation !== row.qty_label) {
-            
-            // Munculkan Pop-up Prompt
-            frappe.prompt([
+    }
+});
+
+var check_discrepancy = function(frm, row, callback) {
+    if (row.qty_confirmation != undefined && row.qty_confirmation !== row.qty_label) {
+        let is_saved = false;
+        let d = new frappe.ui.Dialog({
+            title: 'Quantity Discrepancy Detected',
+            fields: [
                 {
-                    label: 'Pilih Alasan Perbedaan Qty',
+                    label: 'Qty to confirm',
+                    fieldname: 'qty_confirm',
+                    fieldtype: 'Float',
+                    default: row.qty_confirmation,
+                    read_only: 1,
+                },               
+                {
+                    
+                    label: 'Select Reason for Qty Discrepancy',
                     fieldname: 'reason',
-                    fieldtype: 'Select',
-                    options: [
-                        'Barang Rusak',
-                        'Salah Label',
-                        'Kurang dari Supplier',
-                        'Lebih dari Supplier',
-                        'Lainnya'
-                    ],
-                    reqd: 1 // Wajib diisi
+                    fieldtype: 'Link',
+                    options: "Reason Master",
+                    reqd: 1,
+                    get_query: () => {
+                        return {
+                            filters: {
+                                "key_name": "TASKING_REASON" // Ganti dengan fieldname kategori di Part Master
+                            }
+                        };
+                    }
                 },
                 {
-                    label: 'Keterangan Tambahan',
+                    label: 'Remarks (Opsional)',
                     fieldname: 'remark',
                     fieldtype: 'Small Text'
                 }
-            ], (values) => {
-                // Simpan hasil pilihan ke baris tabel tersebut
-                frappe.model.set_value(cdt, cdn, 'discrepancy_reason', values.reason);
-                
+            ],
+            primary_action_label: 'Confirm',
+            primary_action(values) {
+                is_saved = true; 
+                frappe.model.set_value(row.doctype, row.name, 'discrepancy_reason', values.reason);         
                 if(values.remark) {
-                    frappe.model.set_value(cdt, cdn, 'remark', values.remark);
+                    frappe.model.set_value(row.doctype, row.name, 'remark', values.remark);
+                }
+                d.hide();
+                if (callback) callback();
+            },
+            secondary_action_label: 'Cancel',
+            secondary_action() {    
+                frappe.msgprint('Quantity confirmation has been reset. Please verify the quantity and target location again.');
+                d.hide();
+                reset_row_qty(row);
+            },
+            on_hide: function() {
+                if (!is_saved) {
+                    //frappe.msgprint('on hide triggered, resetting qty_confirmation');
+                    reset_row_qty(row);
+                }
+            
+            },
+        });
+        d.show();
+      
+    } else {
+        if (callback) callback();
+    }
+};
+
+var target_location_confirmation = function(frm, row) {
+    let location_saved = false;
+    let locSuggest = row.locationsuggestion;
+    if (!locSuggest){
+        locSuggest = row.locationdestination;
+    } 
+
+    //alert(row.locationdestination);
+    let e = new frappe.ui.Dialog({
+        title: 'Target Location Confirmation',
+        fields: [
+            {
+                label: 'Suggestion Location',
+                fieldname: 'suggestion_location',
+                fieldtype: 'Data',
+                default:locSuggest,
+                read_only:1 
+            },
+            {
+                label: 'Target Location Confirmation',
+                fieldname: 'target_location',
+                fieldtype: 'Link',
+                options: "Warehouse Location",
+                default: "",
+                reqd: 1,
+                get_query: () => {
+                    return {
+                        filters: {
+                            "is_group": 0 // Filter lokasi berdasarkan gudang sumber
+                        }
+                    };
                 }
                 
-                //frappe.msgprint(__('Alasan perbedaan telah disimpan di baris No. {0}', [row.idx]));
-            }, 'Konfirmasi Perbedaan Kuantitas', 'Simpan');
+            },
 
-        } else {
-            // Jika qty disamakan kembali, hapus reason
-            frappe.model.set_value(cdt, cdn, 'discrepancy_reason', '');
-        }
-         frappe.model.set_value(cdt, cdn, 'status', 'Completed');
-    }
-});
+        ],
+        primary_action_label: 'Confirm',
+        primary_action(values) {
+            if (values.target_location == row.locationsource) {
+                frappe.msgprint('Target location is the same as source location. Please verify the location before confirming.', 'Error', 'red');
+                return;
+            }      
+            location_saved = true;
+            
+            frappe.model.set_value(row.doctype, row.name, 'locationdestination', values.target_location);
+            frappe.model.set_value(row.doctype, row.name, 'status', 'Completed');
+            e.hide();
+        },
+        on_hide: function() {
+            if (!location_saved) {
+                //frappe.msgprint('on hide triggered, resetting qty_confirmation');
+                reset_row_qty(row);
+            }
+        
+        },
+    });
+
+    e.show();
+};
+
+// Fungsi Helper agar tidak repot
+var reset_row_qty = function(row) {
+    row._resetting = true;
+    frappe.model.set_value(row.doctype, row.name, 'qty_confirmation', undefined);
+    setTimeout(() => { delete row._resetting; }, 50);
+};
+
+
 
 function fetch_po_from_material_incoming(frm) {
     // Hanya jalankan jika Task Type sesuai dan Reference Name sudah terisi

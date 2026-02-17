@@ -61,11 +61,32 @@ window.load_work_orders = function() {
         args: {
             doctype: 'Work Order Split',
             fields: ['name', 'status','finish_good', 'fg_description', 'quantity_to_be_produced_immediately'],
-			filters: { 'status': ['=', 'Ready for Weighing'] },
+			filters: { 'status': ['in', ['Ready for Weighing', 'Ready for Blending', 'In Weighing', 'Blending Completed']] },
         },
         callback: function(r) {
             let tbody = $('#wo-split-list').empty();
             r.message.forEach(doc => {
+                let indicator_class = "grey"; // Default
+                    
+                if (doc.status === 'Ready for Weighing' || doc.status === 'In Weighing') {
+                    indicator_class = "blue";
+                } else if (doc.status === 'Ready for Blending') {
+                    indicator_class = "orange";
+                } else if (doc.status === 'Blending Completed') {
+                    indicator_class = "green";
+                }
+
+                let action_button = "";
+                if (doc.status === 'Ready for Weighing' || doc.status === 'In Weighing') {
+                    action_button = `<button class="btn btn-sm btn-primary" onclick="open_weighing('${doc.name}')">Timbang</button>`;
+                }
+                else if (doc.status === 'Ready for Blending') {
+                    action_button = `<button class="btn btn-sm btn-primary" onclick="open_weighing('${doc.name}')">Blending</button>`;
+                }
+                else {
+                    action_button = `<button class="btn btn-sm btn-secondary" disabled>Selesai</button>`;
+                }
+
                 tbody.append(`
                     <tr>
                         <td><strong>${doc.name}</strong></td>
@@ -74,15 +95,11 @@ window.load_work_orders = function() {
                         
                         <td>${doc.quantity_to_be_produced_immediately}</td>
                         <td>
-                        <span class="indicator blue">
+                        <span class="indicator ${indicator_class}"></span>
                         <strong>${doc.status}</strong>
                         </span>
                         </td>
-                        <td>
-                            <button class="btn btn-sm btn-primary" 
-                                onclick="open_weighing('${doc.name}')">
-                                    Timbang
-                            </button>
+                        <td>${action_button}
                         </td>
                     </tr>
                 `);
@@ -90,7 +107,7 @@ window.load_work_orders = function() {
         }
     });
 };
-
+ 
 // 3. Load Detail Item (Langsung Tampil di Page)
 window.selected_wo = "";
 window.open_weighing = function(wo_name) {
@@ -126,7 +143,7 @@ function render_items(handover_id) {
                     <td><span class="badge badge-warning">LOT1</span></td>
                     <td>${item.actual_required} ${item.um}</td>
                     <td class="text-center">
-                        <input type="checkbox" class="item-check" data-item="${item.part}" data-batch="${item.batch_no}" data-qty="${item.actual_required}">
+                        <input type="checkbox" class="item-check    " data-item="${item.part}" data-batch="${item.batch_no}" data-qty="${item.actual_required}">
                     </td>
                 </tr>
             `);

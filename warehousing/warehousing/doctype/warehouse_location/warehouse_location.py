@@ -4,11 +4,28 @@
 import frappe
 
 from frappe.utils.nestedset import NestedSet
+from frappe.model.document import Document
 from frappe.utils import cint
 
 class WarehouseLocation(NestedSet):
 	# Field yang menentukan siapa induknya
-    nsm_parent_field = 'parent_warehouse_location' 
+	nsm_parent_field = 'parent_warehouse_location' 
+
+class WarehouseLocation(Document):
+	def validate(self):
+		val = self.total_capacity
+		
+		# Update massal
+		frappe.db.sql("""
+			UPDATE `tabPutaway Method Items`
+			SET capacity = %s
+			WHERE location = %s
+		""", (val, self.name))
+		
+		# Beritahu sistem bahwa data Putaway Method sudah berubah
+		frappe.clear_cache(doctype="Putaway Method")
+		
+
 
     #def on_update(self):
         # Memperbarui struktur pohon (lft, rgt) secara otomatis

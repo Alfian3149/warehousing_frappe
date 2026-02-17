@@ -9,6 +9,7 @@ from frappe.model.mapper import get_mapped_doc
 
 class MaterialIncoming(Document):
 	def validate(self):
+		self.ensure_item_details_exist_in_master()
 		if self.doc_status == 1 and self.status == "Submitted":
 			if not self.submitted_date:
 				self.submitted_date = frappe.utils.now_datetime()
@@ -47,7 +48,24 @@ class MaterialIncoming(Document):
 
 							remaining_qty -= current_qty
 						frappe.db.commit()
+	
+	def ensure_item_details_exist_in_master(self):
+		for row in self.material_incoming_item:
 
+			if not frappe.db.exists("Part Master", row.item_number):
+				self.create_new_item(row)
+				
+
+	def create_new_item(self, row):
+		new_item = frappe.get_doc({
+			"doctype": "Part Master",
+			"part": row.item_number,
+			"um": row.um,
+			"description": row.item_description,
+			"qty_per_pallet": row.qty_per_pallet,
+		})
+		new_item.insert()
+	
 	def before_insert(self):
 		self.status = "Draft"
 

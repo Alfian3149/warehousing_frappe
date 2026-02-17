@@ -569,7 +569,7 @@ frappe.ui.form.on("Material Incoming", {
                             return; 
                         }
                         else{
-                            frm.events.create_picker_task(frm, values.task_type, values.assign_to_person, values.assign_to_role, values.date_instruction, values.time);
+                            frm.events.create_putaway_transfer_task(frm, values.task_type, values.assign_to_person, values.assign_to_role, values.date_instruction, values.time);
                             d.hide();
                         }
                     });
@@ -649,10 +649,15 @@ frappe.ui.form.on("Material Incoming", {
 
                         if (data.ttpod_det && data.ttpod_det.length > 0) {
                             data.ttpod_det.forEach(row => {
-                                if (row.pt_qtypallet == 0){ 
-                                    frappe.msgprint(__("Qty per Pallet untuk item {0} tidak boleh nol. Silakan periksa kembali data PO di QAD.", [row.podpart]));
-                                    return;
-                                }
+                                frappe.db.get_single_value('Material Incoming Control', 'strict_qty_per_pallet')
+                                .then(value => {
+                                    if (value && row.pt_qtypallet == 0){ 
+                                        frappe.msgprint(__("Qty per Pallet untuk item {0} tidak boleh nol. Silakan periksa kembali data PO di QAD.", [row.podpart]));
+                                        return;
+                                    }
+                                });
+
+
                                 let child = frm.add_child('material_incoming_item');
                                 child.pod_line = row.podline;
                                 child.item_number = row.podpart;
@@ -760,7 +765,7 @@ frappe.ui.form.on("Material Incoming", {
         frappe.call({
             method: "warehousing.warehousing.doctype.warehouse_task.warehouse_task.create_putaway_transfer_task", // Memanggil fungsi backend
             args: {
-                source_doc: frm.doc.name,
+                source_doc: frm.doc.physical_verification_id,
                 task_type: task_type, 
                 assigned_to_person: assign_to_person,
                 assigned_to_role: assign_to_role   
@@ -769,13 +774,13 @@ frappe.ui.form.on("Material Incoming", {
             freeze_message: __("Creating Warehouse Task..."),
             callback: function(r) {
                 if (r.message.status === "success") {  
-                    frm.set_value('pv_assigned_date', frappe.datetime.now_datetime());   
-                    frm.set_value('physical_verification_id', r.message.name);
-                    frm.set_value('status', 'Asiggned');
-                    frm.set_value('person_assigned', assign_to_person);
-                    frm.set_value('role_assigned', assign_to_role);
-                    frm.set_value('date_instruction_given', date_instruction);
-                    frm.set_value('time_instruction_given', time_transaction);
+                    frm.set_value('tf_assigned_date', frappe.datetime.now_datetime());   
+                    frm.set_value('putaway_transfer_task_id', r.message.name);
+                    frm.set_value('status', 'Transferring');
+                    frm.set_value('pt_person_assigned', assign_to_person);
+                    frm.set_value('pt_role_assigned', assign_to_role);
+                    frm.set_value('pt_date_instruction_given', date_instruction);
+                    frm.set_value('pt_time_instruction_given', time_transaction);
                     // Simpan dokumen secara otomatis
                     frm.save() 
                     // MEMBUKA FORM DALAM POP-UP (Quick Entry Mode)
@@ -862,7 +867,18 @@ frappe.ui.form.on("Material Incoming", {
         } else {
             frappe.msgprint(__('Nomor Warehouse Task tidak ditemukan pada dokumen ini.'));
         }
-    }
+    },
+    go_to_putaway_transfer_task: function(frm) {
+        if (frm.doc.putaway_transfer_task_id) {    
+            // Pindah halaman ke dokumen Warehouse Task spesifik
+            frappe.set_route('Form', 'Warehouse Task', frm.doc.putaway_transfer_task_id);
+            
+        } else {
+            frappe.msgprint(__('Nomor Warehouse Task tidak ditemukan pada dokumen ini.'));
+        }
+    },
+
+
  });
 
 frappe.ui.form.on('Material Incoming Item', {

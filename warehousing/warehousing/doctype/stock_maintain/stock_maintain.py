@@ -18,5 +18,6 @@ class StockMaintain(Document):
 			lotserial_prefix = f"{self.part}-{day}{month}{year}"
 			lotserial_running_number = getseries(lotserial_prefix, 3)
 			self.lot_serial = f"{day}{month}{year}-{lotserial_running_number}"
-		update_inventory_qty(self.source_type, self.data_link, self.inventory_transactions, self.posting_date, self.site, self.part, self.lot_serial, self.reference, self.warehouse_location, self.quantity_change, self.status, self.expire_date, self.po_number, self.po_line)
-		frappe.msgprint(f"Inventory updated successfully for Stock Maintain {self.name}")
+		result = update_inventory_qty(self.source_type, self.data_link, self.inventory_transactions, self.posting_date, self.site, self.part, self.lot_serial, self.reference, self.warehouse_location, self.quantity_change, self.status, self.expire_date, self.po_number, self.po_line)
+	
+		frappe.msgprint(f"result : {result['message']} with doc name {result['doc_name']}")

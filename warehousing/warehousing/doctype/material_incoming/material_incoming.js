@@ -649,7 +649,7 @@ frappe.ui.form.on("Material Incoming", {
 
                         if (data.ttpod_det && data.ttpod_det.length > 0) {
                             data.ttpod_det.forEach(row => {
-                                frappe.db.get_single_value('Material Incoming Control', 'strict_qty_per_pallet')
+                                frappe.db.get_single_value('Material Incoming Control', 'strict_when_qty_per_pallet_item_is_zero')
                                 .then(value => {
                                     if (value && row.pt_qtypallet == 0){ 
                                         frappe.msgprint(__("Qty per Pallet untuk item {0} tidak boleh nol. Silakan periksa kembali data PO di QAD.", [row.podpart]));

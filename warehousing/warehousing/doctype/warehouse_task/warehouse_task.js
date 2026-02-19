@@ -3,6 +3,10 @@
 
 frappe.ui.form.on("Warehouse Task", {
  	refresh(frm) {
+        
+        if (frm.doc.task_type === "Putaway Transfer"){
+            frm.trigger('warehouse_task_detail');
+        }
         toggle_summary_section(frm);
         fetch_po_from_material_incoming(frm);
         frm.toggle_display('po_number', frm.doc.task_type === 'Physical Verification');
@@ -58,6 +62,27 @@ frappe.ui.form.on("Warehouse Task", {
         // Menampilkan atau menyembunyikan field po_number secara manual
         frm.toggle_display('po_number', frm.doc.task_type === 'Physical Verification');
     },
+
+    warehouse_task_detail: function(frm, cdt, cdn) {
+        // Jika user mengklik baris untuk membuka popup edit
+        let row = locals[cdt][cdn];
+        if (row.transferred) {
+            // Mengunci semua field di dalam popup
+            frm.fields_dict['warehouse_task_details'].grid.wrapper
+                .find(`[data-name="${cdn}"]`).find('.grid-static-col').addClass('not-editable');
+                
+            // Atau kunci field spesifik secara eksplisit
+            frm.get_field('warehouse_task_detail').grid.get_field('item_code').get_query = function() {
+                return { filters: { 'name': ['=', ''] } }; // Mematikan pencarian
+            };
+        }
+        /* frappe.model.set_value(row.doctype, row.name, 'executor', frappe.session.user);
+        if (!row.executor){
+            frappe.model.set_value(row.doctype, row.name, 'executor', frappe.session.user);
+            frappe.model.set_value(row.doctype, row.name, 'pic_execution', frappe.datetime.now_datetime());
+        } */
+
+    }
 });
 
 // Trigger saat ada perubahan di Child Table 'Warehouse Task Detail'
@@ -86,7 +111,6 @@ var update_parent_status = function(frm) {
         frm.set_value('status', 'Pending');
         return;
     }
-
     // Cek apakah semua status di baris adalah 'Complete'
     let all_complete = details.every(row => row.status === 'Completed');
 
@@ -104,7 +128,9 @@ frappe.ui.form.on('Warehouse Task Detail', {
         if (row._resetting) return;
         check_discrepancy(frm, row, function() {
             target_location_confirmation(frm, row);
-            frappe.model.set_value(cdt, cdn, 'status', 'Completed');
+            frappe.model.set_value(row.doctype, row.name, 'executor', frappe.session.user);
+            frappe.model.set_value(row.doctype, row.name, 'execution_time', frappe.datetime.now_datetime());
+            frm.refresh_field('warehouse_task_detail');
         }
     );
 
@@ -112,6 +138,11 @@ frappe.ui.form.on('Warehouse Task Detail', {
 });
 
 var check_discrepancy = function(frm, row, callback) {
+    if (row.qty_confirmation > row.qty_label){
+        reset_row_qty(row); 
+        frappe.msgprint('Quantity confirmation cannot be greater than Qty Label.');
+        return;
+    }
     if (row.qty_confirmation != undefined && row.qty_confirmation !== row.qty_label) {
         let is_saved = false;
         let d = new frappe.ui.Dialog({
@@ -130,6 +161,7 @@ var check_discrepancy = function(frm, row, callback) {
                     fieldname: 'reason',
                     fieldtype: 'Link',
                     options: "Reason Master",
+                    default: "",
                     reqd: 1,
                     get_query: () => {
                         return {
@@ -178,11 +210,15 @@ var check_discrepancy = function(frm, row, callback) {
 
 var target_location_confirmation = function(frm, row) {
     let location_saved = false;
+    let locDestination = "";
     let locSuggest = row.locationsuggestion;
     if (!locSuggest){
         locSuggest = row.locationdestination;
-    } 
+    }
 
+    if (frm.doc.task_type === "Physical Verification"){
+        locDestination = row.locationdestination;
+    }
     //alert(row.locationdestination);
     let e = new frappe.ui.Dialog({
         title: 'Target Location Confirmation',
@@ -199,7 +235,7 @@ var target_location_confirmation = function(frm, row) {
                 fieldname: 'target_location',
                 fieldtype: 'Link',
                 options: "Warehouse Location",
-                default: "",
+                default: locDestination,
                 reqd: 1,
                 get_query: () => {
                     return {
@@ -223,6 +259,7 @@ var target_location_confirmation = function(frm, row) {
             frappe.model.set_value(row.doctype, row.name, 'locationdestination', values.target_location);
             frappe.model.set_value(row.doctype, row.name, 'status', 'Completed');
             e.hide();
+            setTimeout(() => { frm.save(); }, 50);
         },
         on_hide: function() {
             if (!location_saved) {

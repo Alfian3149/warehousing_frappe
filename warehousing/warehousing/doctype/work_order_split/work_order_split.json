@@ -37,10 +37,11 @@
   "column_break_xzhk",
   "quantity_rejected",
   "section_break_vvwo",
-  "shopfoor_location",
+  "shopfloor_location",
   "column_break_mybv",
   "required_by",
   "is_create_mts",
+  "calculation_request_method",
   "link_to_item_request",
   "section_break_ufxb",
   "work_order_split_detail"
@@ -188,12 +189,6 @@
    "label": "Quantity In Tonnase"
   },
   {
-   "fieldname": "shopfoor_location",
-   "fieldtype": "Link",
-   "label": "Shopfoor location",
-   "options": "Warehouse Location"
-  },
-  {
    "fieldname": "work_order_split_detail",
    "fieldtype": "Table",
    "options": "Work Order Split Detail"
@@ -215,7 +210,7 @@
    "label": "Net Weight"
   },
   {
-   "default": "0",
+   "default": "1",
    "fieldname": "is_create_mts",
    "fieldtype": "Check",
    "label": "Create Material Request?"
@@ -245,13 +240,25 @@
    "fieldtype": "Select",
    "label": "Status",
    "options": "Draft\nSubmitted\nReady for Weighing\nIn Weighing\nReady for Blending\nCompleted"
+  },
+  {
+   "fieldname": "shopfloor_location",
+   "fieldtype": "Link",
+   "label": "Shopfloor location",
+   "options": "Warehouse Location"
+  },
+  {
+   "fieldname": "calculation_request_method",
+   "fieldtype": "Int",
+   "label": "Calculation Request Method"
   }
  ],
  "grid_page_length": 50,
+ "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-06 08:52:22.013903",
+ "modified": "2026-02-19 14:18:43.472269",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Work Order Split",

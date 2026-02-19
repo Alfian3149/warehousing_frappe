@@ -10,6 +10,20 @@ from warehousing.warehousing.specialLogic import get_multi_bin_suggestion
 import copy
 
 class WarehouseTask(Document):
+    def on_submit(self):
+        if self.task_type == "Putaway Transfer" :
+            frappe.db.delete("Reserved Task Entry", filters={'task': self.name})
+
+            frappe.enqueue(
+            "warehousing.warehousing.api_transfer.transfer_submit_to_qad",
+            doc_name=self.name,
+            queue="long",       # Opsi: 'short', 'default', atau 'long'
+            timeout=600,        # Durasi maksimal pengerjaan (detik)
+            is_async=True,
+            enqueue_after_commit=True # Menjamin job jalan SETELAH transaksi DB selesai
+            )
+            #transfer = frappe.call("warehousing.warehousing.api_transfer.transfer_submit_to_qad", doc_name=self.name)
+
     """  def on_submit(self):
          from frappe.desk.doctype.notification_log.notification_log import enqueue_create_notification
          enqueue_create_notification(self.owner, {
@@ -41,8 +55,15 @@ class WarehouseTask(Document):
         # .##### akan otomatis diisi dengan nomor urut (00001, 00002, dst)
         self.name = make_autoname(f"WHTASK-{code}-{year}-.#####")
 
+    def before_save(self): 
+        if self.task_type == "Putaway Transfer" :
+            for row in self.get("warehouse_task_detail"): 
+                if row.status == "Completed"and row.transferred == False  :
+                    row.update_transferred()  
+                
     def validate(self):
-            self.update_status_based_on_details()
+
+        self.update_status_based_on_details()
             #self.lock_document_if_completed()
 
     """ def on_update(self):

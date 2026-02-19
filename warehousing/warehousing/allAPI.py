@@ -6,7 +6,8 @@ import time
 from bs4 import BeautifulSoup 
 from warehousing.warehousing.doctype.inventory.inventory import update_inventory_qty
 import xml.etree.ElementTree as ET
- 
+from warehousing.warehousing.utils import test_internal_api
+
 @frappe.whitelist()
 def get_simulated_picklist_item(site, part, qty, domain):
     import xml.etree.ElementTree as ET
@@ -365,7 +366,8 @@ def po_receipt_confirmation(parent_doc_name, material_incoming_name):
         int_log.status = "Failed"
         int_log.error_log = frappe.get_traceback()
         int_log.save(ignore_permissions=True)
-        frappe.log_error(frappe.get_traceback(), "QAD Get PO API Error")
+        frappe.db.commit()
+        #frappe.log_error(frappe.get_traceback(), "QAD Get PO API Error")
         frappe.throw(_("Terjadi kesalahan saat menghubungi QAD: {0}").format(str(e)))
     
 def get_grouped_data(docname):
@@ -391,14 +393,6 @@ def get_grouped_data(docname):
     grouped_list = list(summary.values())
     
     return grouped_list
-
-def test_internal_api(url):
-    try:
-        response = requests.get(url, timeout=5)
-        if response.status_code == 200:
-            return {"status": "success", "message": "Koneksi server internal berhasil"}
-    except requests.exceptions.ConnectionError:
-        return {"status": "failed", "message": "Koneksi server internal gagal"}
 
 def log_xml_integration(service_name, request_data, xml_response):
     log = frappe.get_doc({

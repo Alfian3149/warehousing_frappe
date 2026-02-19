@@ -69,7 +69,7 @@ def get_fifo_picklist_with_reserved(item_request_name):
                 allocated_qty += take_qty
 
     return results
-    
+     
 @frappe.whitelist()
 def update_inventory_qty(doctype, doctype_link, transType, postingDate, site, part, lot_serial, reference, whs_location, qty_change, invStatus=None, expireDate=None, poNumber=None, poLine=None):
     """
@@ -77,17 +77,32 @@ def update_inventory_qty(doctype, doctype_link, transType, postingDate, site, pa
     """
     in_out= frappe.db.get_value("Transaction Type", transType, "in_out") 
     if not in_out:
+        frappe.throw(
+            msg=_("Transaction Type {0} belum diatur In/Out nya").format(transType),
+            title=_("ERROR"),
+            exc=frappe.ValidationError
+        )
         frappe.throw(_("Transaction Type {0} belum diatur In/Out nya").format(transType))
     # Cari record yang sudah ada
     inventory = frappe.db.get_value("Inventory", 
-        {"site": site, "part": part, "lot_serial": lot_serial, "reference": reference, "warehouse_location": whs_location}, ["name", "qty_on_hand"], as_dict=True)
+        {"site": site, "part": part, "lot_serial": lot_serial, "reference": reference, "warehouse_location": whs_location}, ["name", "qty_on_hand", "inventory_status", "expire_date"], as_dict=True)
 
     if inventory:
         current_qty = inventory.qty_on_hand
         name = inventory.name
+        in_status = inventory.inventory_status
+        in_expire = inventory.expire_date
     else:
+        if in_out == "OUT" : 
+            frappe.throw(
+                msg=_("Inventory does not exist to {0} process").format(transType),
+                title=_("ERROR"),
+                exc=frappe.ValidationError
+            )
         current_qty = 0
         name = None
+        in_status = invStatus
+        in_expire = expireDate
 
     new_balance =  flt(current_qty) + flt(qty_change) if in_out == "IN" else flt(current_qty) - flt(qty_change)
 
@@ -103,8 +118,8 @@ def update_inventory_qty(doctype, doctype_link, transType, postingDate, site, pa
         "part": part,
         "lot_serial": lot_serial,
         "warehouse_location": whs_location,
-        "expire_date": expireDate if expireDate else None,
-        "status": invStatus,
+        "expire_date": in_expire if in_expire else None,
+        "status": in_status if in_status else None,
         "actual_qty": flt(qty_change) if in_out == "IN" else -flt(qty_change),
         "qty_after_transaction": flt(new_balance),
         "posting_date": postingDate,
@@ -116,16 +131,18 @@ def update_inventory_qty(doctype, doctype_link, transType, postingDate, site, pa
         # UPDATE: Ambil dokumen dan tambahkan qty
         doc = frappe.get_doc("Inventory", name)
         doc.qty_on_hand = flt(new_balance)
-        if invStatus : 
-            doc.inventory_status = invStatus
-        if expireDate: 
-            doc.expire_date = expireDate    
+        if in_status : 
+            doc.inventory_status = in_status
+        if in_expire: 
+            doc.expire_date = in_expire    
         doc.save(ignore_permissions=True)
+        return {'success':True, 'doc_name':doc.name, 'message': 'Inventory updated successfully'}
     else:
         # CREATE: Jika belum ada, buat record baru
-        create_inventory_record(site, part, lot_serial, reference, whs_location, new_balance, invStatus, expireDate)
+        name = create_inventory_record(site, part, lot_serial, reference, whs_location, new_balance, in_status, in_expire)
+        return {'success':True, 'doc_name':name, 'message': 'New inventory record created'}
 
-    
+    return {'success':False, 'doc_name':name, 'message': 'Failed to update inventory'}
 def create_inventory_record(site, part, lot_serial, reference, whs_location, initial_qty, invStatus, expireDate=None):
     """
     Create: Membuat baris baru di tabel Inventory
@@ -141,15 +158,27 @@ def create_inventory_record(site, part, lot_serial, reference, whs_location, ini
         new_inv.expire_date = expireDate 
     new_inv.inventory_status = invStatus
     new_inv.insert(ignore_permissions=True)
-
+    return new_inv.name
 @frappe.whitelist()
-def get_inventory_qty(site, part, lot_serial, reference, whs_location):
+def get_inventory_detail(site, part, lot_serial, reference, whs_location):
     """
     Read: Mengambil saldo stok saat ini
     """
     qty = frappe.db.get_value("Inventory", 
         {"site": site, "part": part, "lot_serial": lot_serial, "reference": reference, "warehouse_location": whs_location}, "qty_on_hand")
     return float(qty) if qty else 0
+
+@frappe.whitelist() 
+def get_iventory_by_item_location(item_list, in_location):
+    default_site = frappe.db.get_single_value("Material Incoming Control", "default_site")
+    qty_item_in = {}
+    for item in item_list : 
+        total_qty = frappe.db.get_value("Inventory", 
+            {"site": default_site, "part":item, "warehouse_location":in_location}, 
+                "sum(qty_on_hand)") or 0
+
+        qty_item_in = {"part":item, "total_qty":total_qty}
+    return qty_item_in
 
 @frappe.whitelist()
 def delete_inventory_entry(site, part, lot_serial, reference, whs_location):

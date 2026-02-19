@@ -6,6 +6,7 @@ from frappe.model.document import Document
 
 class WorkOrderSplit(Document):
 	def validate(self):
+		#FINISH GOOD ITEM
 		if not frappe.db.exists("Part Master", self.finish_good):
 			new_item = frappe.get_doc({
 				"doctype": "Part Master",
@@ -16,11 +17,11 @@ class WorkOrderSplit(Document):
 				})
 			new_item.insert()
 		
+		#COMPONENT ITEM
 		self.ensure_item_details_exist_in_master()
 
 	def ensure_item_details_exist_in_master(self):
 		for row in self.work_order_split_detail:
-
 			if not frappe.db.exists("Part Master", row.part):
 				self.create_new_item(row)
 				
@@ -35,28 +36,29 @@ class WorkOrderSplit(Document):
 		new_item.insert()
 
 
-	def on_submit(self):
-		#if not self.fg_qty_per_pallet:
-		#	frappe.throw("Qty per Pallet Finish Good kosong, silakan isi terlebih dahulu.")
-
+	def on_submit(self): 
 		if self.is_create_mts:
 			#frappe.model.mapper.assign_confirm(self.doctype, self.name, "safno@gmail.com")
 			new_itmreq = frappe.new_doc("Item Request")
 			new_itmreq.purpose = "Manufacture"
 			new_itmreq.posting_date = self.posting_date
 			new_itmreq.required_by = self.required_by
-			new_itmreq.target_location = self.shopfoor_location
+			new_itmreq.target_location = self.shopfloor_location
 			new_itmreq.doctype_source = "Work Order Split"
 			new_itmreq.link = self.name
 
 			for item in self.work_order_split_detail:
-				#if not item.qty_per_pallet:
-				#	frappe.throw(f"Qty per Pallet untuk Material {item.part} kosong, silakan isi terlebih dahulu.")
+				qty_needed = 0
+				if self.calculation_request_method == 1: # berdasarkan actual required
+					qty_needed = item.actual_required
+				elif self.calculation_request_method == 2: # berdasarkan keterseidaan
+					qty_needed = item.actual_required - item.availability
+				
 				new_item = new_itmreq.append("items")
 				new_item.part = item.part
 				new_item.um = item.um
-				new_item.quantity = item.actual_required
-				new_item.target_location = self.shopfoor_location
+				new_item.quantity = qty_needed
+				new_item.target_location = self.shopfloor_location
 			new_itmreq.insert()
 			new_itmreq.submit()
 			

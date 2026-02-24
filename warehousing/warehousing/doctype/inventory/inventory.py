@@ -5,70 +5,104 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
-
+import math
+import time
 class Inventory(Document):
 	pass
 
-@frappe.whitelist()
-def get_fifo_picklist_with_reserved(item_request_name):
-    # 1. Ambil data dari Item Request
-    doc = frappe.get_doc("Item Request", item_request_name)
+@frappe.whitelist() 
+def get_fifo_picklist_with_reserved(item_request_doc, item_status):
+    default_site = frappe.db.get_single_value("Material Incoming Control", "default_site")
+    doc = frappe.get_doc("Item Request", item_request_doc)
     results = []
 
-    for item in doc.items:
-        needed_qty = flt(item.quantity)
-        item_code = item.part
-        allocated_qty = 0
-        
-        # 2. Ambil total Reserved Qty dari table Bin untuk item ini
-        # Ini mencegah kita mengambil stok yang sudah di-reserve oleh Sales Order/Material Request lain
-        inventory = frappe.db.get_value("Bin", 
-            {"part": item_code, "warehouse": item.warehouse}, 
-            ["qty_on_hand", "qty_reserved"], as_dict=True)
-        
-        # Stok bersih yang benar-benar bisa diambil
-        total_available_pool = flt(inventory.qty_on_hand) - flt(inventory.qty_reserved) if inventory else 0
+    totals = frappe.db.get_value("Item Request Detail", 
+        filters={"parent": item_request_doc}, fieldname=["sum(quantity_requested) as total_request", "sum(quantity_picked) as total_picked"], as_dict=True)  
+    total_selisih = (totals.get("total_request") or 0) - (totals.get("total_picked") or 0)
+    if total_selisih <= 0:
+        frappe.msgprint(_("Request sudah terpenuhi semua. Tidak perlu membuat picklist."))
 
-        if total_available_pool <= 0:
-            frappe.msgprint(f"Stok untuk {item_code} tidak tersedia (Sudah di-reserve atau kosong).")
+    time.sleep(1) # Simulasi delay untuk melihat efek real-time di UI
+    for item in doc.items:
+        needed_qty = flt(item.quantity_requested) - flt(item.quantity_picked)
+        if needed_qty <= 0:     
+            continue  # Kebutuhan sudah terpenuhi, skip ke item berikutnya
+        allocated_qty = 0
+        site = item.site if item.site else default_site
+        total_qty_on_hand = frappe.db.get_list("Inventory", 
+            {"site": site, "part": item.part, "inventory_status": item_status}, 
+            ["SUM(qty_on_hand) as qty"])
+        
+        total_qty_reserved = frappe.db.get_list("Reserved Task Entry", 
+            {"purpose":"Picking","site": site, "part": item.part}, 
+            ["SUM(qty) as qty"])
+
+        # Stok bersih yang benar-benar bisa diambil
+        qty_on_hand = flt(total_qty_on_hand[0].qty) if total_qty_on_hand else 0
+        qty_reserved = flt(total_qty_reserved[0].qty) if total_qty_reserved else 0
+        total_available = qty_on_hand - qty_reserved
+
+        if total_available <= 0:
+            frappe.msgprint(f"Stok untuk {item.part} OH: {qty_on_hand}, Reserved: {qty_reserved} tidak tersedia (Full Reserved).")
             continue
 
         # 3. Cari detail Lot/Serial berdasarkan FIFO (Stock Ledger Entry)
         # Kita ambil baris yang memiliki balance_qty > 0
         stocks = frappe.db.sql(f"""
             SELECT 
-                batch_no, warehouse, serial_no, actual_qty, posting_date, posting_time
+                site, part, warehouse_location, lot_serial, qty_on_hand, expire_date 
             FROM 
-                `tabStock Ledger Entry`
+                `tabInventory`
             WHERE 
-                item_code = %s 
-                AND warehouse = %s
-                AND is_cancelled = 0
-                AND actual_qty > 0
+                site = %s 
+                AND part = %s 
+                AND inventory_status = %s
+                AND expire_date > %s
+                AND qty_on_hand > 0
             ORDER BY 
-                posting_date ASC, posting_time ASC, creation ASC
-        """, (item_code, item.warehouse), as_dict=True)
+                lot_serial ASC
+        """, (site, item.part, item_status, frappe.utils.nowdate()), as_dict=True)
 
-        for stock in stocks:
-            if allocated_qty >= needed_qty or allocated_qty >= total_available_pool:
-                break
+        for stock_oh in stocks:
+            if allocated_qty >= needed_qty:
+                break  # Kebutuhan sudah terpenuhi
+
+            #TANPA FILTER LOKASI KARENA BARANG BISA JADI SUDAH BERPINDAH
+            res_reserved = frappe.db.get_list("Reserved Task Entry", 
+            {"purpose":"Picking","site": stock_oh.site, "part": stock_oh.part, "lot_serial": stock_oh.lot_serial, "warehouse_location": stock_oh.warehouse_location}, 
+            ["SUM(qty) as qty"])
             
+            stock_reserved = flt(res_reserved[0].qty) if res_reserved else 0
+            if stock_oh.qty_on_hand <= stock_reserved:
+                continue  # Lot ini sudah habis di-reserve, skip ke lot berikutnya
+                
             # Hitung sisa yang bisa diambil dari baris lot ini
             # Tidak boleh melebihi pool ketersediaan total (reserved logic)
-            can_take_from_this_lot = min(stock.actual_qty, total_available_pool - allocated_qty)
+            can_take_from_this_lot = flt(stock_oh.qty_on_hand) - flt(stock_reserved)    
             take_qty = min(can_take_from_this_lot, needed_qty - allocated_qty)
             
             if take_qty > 0:
+                qty_per_pallet = flt(frappe.db.get_value("Part Master", stock_oh.part, "qty_per_pallet") or 1)
+                if qty_per_pallet > 0:
+                    qty_pallet = math.ceil(flt(take_qty) / qty_per_pallet)
+                else:
+                    qty_pallet = 0
+
                 results.append({
-                    "item_code": item_code,
-                    "warehouse": stock.warehouse,
-                    "batch_no": stock.batch_no,
-                    "serial_no": stock.serial_no,
+                    "site": stock_oh.site,
+                    "part": stock_oh.part,
+                    "description": frappe.db.get_value("Part Master", stock_oh.part, "description"),
+                    "um": frappe.db.get_value("Part Master", stock_oh.part, "um"),
+                    "qty_per_pallet": qty_per_pallet,
+                    "amt_pallet": qty_pallet,
+                    "from_location": stock_oh.warehouse_location,
+                    "to_location": item.target_location,
+                    "lot_serial": stock_oh.lot_serial,
                     "qty": take_qty
                 })
                 allocated_qty += take_qty
 
-    return results
+    return results  
      
 @frappe.whitelist()
 def update_inventory_qty(doctype, doctype_link, transType, postingDate, site, part, lot_serial, reference, whs_location, qty_change, invStatus=None, expireDate=None, poNumber=None, poLine=None):
@@ -210,7 +244,6 @@ def QAD_middleware_sync():
     # Logika untuk mencatat ke Stock Ledger atau DocType khusus 'QAD Sync Log'
     # Pastikan data yang dikirim QAD lengkap (part, qty, site, trans_type, dll)
     return {"status": "success", "message": "Transaction synced"}
-
 
 @frappe.whitelist(allow_guest=True)
 def get_warehouse_status():

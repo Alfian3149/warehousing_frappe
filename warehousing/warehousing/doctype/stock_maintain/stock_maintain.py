@@ -20,4 +20,4 @@ class StockMaintain(Document):
 			self.lot_serial = f"{day}{month}{year}-{lotserial_running_number}"
 		result = update_inventory_qty(self.source_type, self.data_link, self.inventory_transactions, self.posting_date, self.site, self.part, self.lot_serial, self.reference, self.warehouse_location, self.quantity_change, self.status, self.expire_date, self.po_number, self.po_line)
 	
-		frappe.msgprint(f"result : {result['message']} with doc name {result['doc_name']}")
+		frappe.msgprint(f"result : {result['message']} for Part {self.part} with Lot/Serial {self.lot_serial} at Warehouse Location {self.warehouse_location} with Quantity Change {self.quantity_change}")

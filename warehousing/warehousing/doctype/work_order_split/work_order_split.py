@@ -3,6 +3,7 @@
 
 import frappe
 from frappe.model.document import Document
+from frappe.utils import flt
 
 class WorkOrderSplit(Document):
 	def validate(self):
@@ -38,26 +39,32 @@ class WorkOrderSplit(Document):
 
 	def on_submit(self): 
 		if self.is_create_mts:
+			method = int(self.calculation_request_method or 0)
 			#frappe.model.mapper.assign_confirm(self.doctype, self.name, "safno@gmail.com")
 			new_itmreq = frappe.new_doc("Item Request")
 			new_itmreq.purpose = "Manufacture"
 			new_itmreq.posting_date = self.posting_date
 			new_itmreq.required_by = self.required_by
+			new_itmreq.requestor_by = frappe.session.user
 			new_itmreq.target_location = self.shopfloor_location
 			new_itmreq.doctype_source = "Work Order Split"
 			new_itmreq.link = self.name
 
 			for item in self.work_order_split_detail:
 				qty_needed = 0
-				if self.calculation_request_method == 1: # berdasarkan actual required
-					qty_needed = item.actual_required
-				elif self.calculation_request_method == 2: # berdasarkan keterseidaan
-					qty_needed = item.actual_required - item.availability
-				
+				if method == 1: # berdasarkan actual required
+					qty_needed = flt(item.actual_required)
+				elif method == 2: # berdasarkan ketersediaan
+					qty_needed = flt(item.actual_required) - flt(item.availability)
+				else :
+					qty_needed = flt(item.actual_required)
+
 				new_item = new_itmreq.append("items")
+				new_item.site = self.site
 				new_item.part = item.part
 				new_item.um = item.um
-				new_item.quantity = qty_needed
+				new_item.quantity_requested = qty_needed
+				new_item.quantity_picked = 0
 				new_item.target_location = self.shopfloor_location
 			new_itmreq.insert()
 			new_itmreq.submit()

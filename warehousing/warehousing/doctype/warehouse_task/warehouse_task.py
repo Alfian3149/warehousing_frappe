@@ -8,6 +8,7 @@ import frappe
 from frappe.model.naming import make_autoname
 from warehousing.warehousing.specialLogic import get_multi_bin_suggestion
 import copy
+from frappe.utils import flt
 
 class WarehouseTask(Document):
     def on_submit(self):
@@ -33,8 +34,43 @@ class WarehouseTask(Document):
             "from_user": self.owner,
             "type": "Alert"
         }) """
+    def after_insert(self):
+        if self.task_type == "Picking":
+            default_site = frappe.db.get_single_value("Material Incoming Control", "default_site")
+            item_request_doc = self.reference_name
+            item_request = frappe.get_doc("Item Request", item_request_doc)
+            
+            sorted_task_details = sorted(
+                self.warehouse_task_detail, 
+                key=lambda x: (x.item), 
+                reverse=True
+            )
+            grouped_summary = {}
+            for row in sorted_task_details:
+                reserved_task = frappe.new_doc("Reserved Task Entry")
+                reserved_task.purpose = "Picking"
+                reserved_task.doctype_source = "Item Request"
+                reserved_task.task = item_request_doc
+                reserved_task.site = default_site
+                reserved_task.part = row.item
+                reserved_task.lot_serial = row.lotserial
+                reserved_task.qty = row.qty_label
+                reserved_task.warehouse_location = row.locationsource
 
-        
+                reserved_task.insert(ignore_permissions=True)
+
+                if row.item not in grouped_summary:
+                    grouped_summary[row.item] = 0
+                accum_qty = flt(grouped_summary[row.item])
+                grouped_summary[row.item] = accum_qty + flt(row.qty_label)
+
+            for request in item_request.items:
+                if request.part in grouped_summary:
+                    prev_qty_picked = flt(request.quantity_picked)
+                    request.quantity_picked = prev_qty_picked + grouped_summary[request.part]
+
+            item_request.save() 
+            
     def autoname(self):
         # 1. Tentukan mapping kode berdasarkan task_type
         type_codes = {
@@ -140,7 +176,7 @@ def create_physical_verification_task(source_doc, task_type, assigned_to_person=
     elif task_type == "Putaway Transfer":
         Material_Incoming.transfer_task_id = new_task.name
     Material_Incoming.save() """
-    frappe.db.commit()
+  
     return {
          "status": "success",
          "name": new_task.name,
@@ -211,19 +247,18 @@ def create_putaway_transfer_task(source_doc, task_type, assigned_to_person=None,
             })
  
     new_task.insert()
-    frappe.db.commit()
     for key, data in item_location_map_copy.items():
         if not data:
             continue
         new_reserved = frappe.new_doc("Reserved Task Entry")
         new_reserved.site = default_site
+        new_reserved.purpose = "Putaway Transfer"
         new_reserved.warehouse_location = data[0]['location']
         new_reserved.doctype_source = "Warehouse Task"
         new_reserved.task = new_task.name
         new_reserved.qty = data[0]['amt_pallet_covered']
  
         new_reserved.insert() 
-    frappe.db.commit()
 
     return {
         "status": "success",
@@ -265,6 +300,7 @@ def location_suggestion(item_code, total_incoming_pallet, reference_doc=None):
 
         # 2. Hitung Kapasitas Tersedia (Free Pallet)
         reserved_entries = frappe.db.get_all('Reserved Task Entry', filters={
+            'purpose': "Putaway Transfer",
             'site': control.default_site,
             'warehouse_location': loc.location
         }, fields=['SUM(qty) as total_reserved'])
@@ -295,3 +331,19 @@ def location_suggestion(item_code, total_incoming_pallet, reference_doc=None):
         remaining_pallet -= can_take
 
     return suggestions
+
+@frappe.whitelist()
+def get_warehouse_task_items(item_request_name):
+    # Cari semua task
+    tasks = frappe.get_all("Warehouse Task", filters={"reference_name": item_request_name}, fields=["name"])
+    if not tasks:
+        return []
+
+    task_names = [t.name for t in tasks]
+
+    # Ambil detail item (di server tidak terhalang permission UI)
+    return frappe.get_all("Warehouse Task Detail", 
+        filters={"parent": ["in", task_names]},
+        fields=['item', 'description', 'lotserial', 'qty_label', 'um'],
+        order_by='item asc, lotserial asc'
+    )

@@ -239,7 +239,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Draft\nSubmitted\nReady for Weighing\nIn Weighing\nReady for Blending\nCompleted"
+   "options": "Draft\nSubmitted\nReady For Weighing\nIn Weighing\nReady For Blending\nCompleted"
   },
   {
    "fieldname": "shopfloor_location",
@@ -258,7 +258,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-19 14:18:43.472269",
+ "modified": "2026-02-24 06:26:16.761644",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Work Order Split",

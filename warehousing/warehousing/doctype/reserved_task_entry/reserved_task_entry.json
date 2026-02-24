@@ -5,7 +5,10 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "purpose",
   "site",
+  "part",
+  "lot_serial",
   "warehouse_location",
   "doctype_source",
   "task",
@@ -34,7 +37,9 @@
   {
    "fieldname": "site",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Site",
+   "reqd": 1,
    "search_index": 1
   },
   {
@@ -42,12 +47,32 @@
    "fieldtype": "Link",
    "label": "Doctype",
    "options": "DocType"
+  },
+  {
+   "fieldname": "purpose",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Purpose",
+   "options": "Putaway\nPicking",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "part",
+   "fieldtype": "Link",
+   "label": "Part",
+   "options": "Part Master"
+  },
+  {
+   "fieldname": "lot_serial",
+   "fieldtype": "Data",
+   "label": "Lotserial"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-16 13:14:35.408055",
+ "modified": "2026-02-20 05:58:51.634702",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Reserved Task Entry",

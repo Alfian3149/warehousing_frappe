@@ -349,8 +349,6 @@ def po_receipt_confirmation(parent_doc_name, material_incoming_name):
                     )
 
             int_log.save(ignore_permissions=True)
-            frappe.db.commit()
-
             return {
                 "receiver": receiver,
                 "status": "failed" if isNotOk == "true" else "success",
@@ -366,7 +364,6 @@ def po_receipt_confirmation(parent_doc_name, material_incoming_name):
         int_log.status = "Failed"
         int_log.error_log = frappe.get_traceback()
         int_log.save(ignore_permissions=True)
-        frappe.db.commit()
         #frappe.log_error(frappe.get_traceback(), "QAD Get PO API Error")
         frappe.throw(_("Terjadi kesalahan saat menghubungi QAD: {0}").format(str(e)))
     
@@ -405,5 +402,4 @@ def log_xml_integration(service_name, request_data, xml_response):
     })
      
     log.insert(ignore_permissions=True)
-    frappe.db.commit()
     return log.name 

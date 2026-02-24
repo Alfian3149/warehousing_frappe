@@ -6,28 +6,38 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "item_details_section",
   "material_label_link",
   "warehouse_task_link",
   "executor",
   "execution_time",
+  "transferred",
+  "has_background_job",
   "column_break_dwtr",
   "line_po",
   "item",
+  "um",
   "description",
   "lotserial",
-  "qty_label",
-  "qty_confirmation",
   "column_break_mqaj",
   "discrepancy_reason",
   "remark",
-  "column_break_mbpn",
   "locationsource",
-  "locationdestination",
   "locationsuggestion",
+  "locationdestination",
+  "column_break_mbpn",
+  "qty_per_pallet",
+  "amt_pallet",
+  "qty_label",
+  "qty_confirmation",
   "expired_date",
   "status",
-  "has_background_job",
-  "transferred"
+  "section_break_zryh",
+  "qty_handover",
+  "has_handovered",
+  "column_break_lzby",
+  "user_handovered",
+  "time_handovered"
  ],
  "fields": [
   {
@@ -157,13 +167,65 @@
    "fieldname": "execution_time",
    "fieldtype": "Datetime",
    "label": "Execution Time"
+  },
+  {
+   "fieldname": "um",
+   "fieldtype": "Data",
+   "label": "UM"
+  },
+  {
+   "fieldname": "qty_per_pallet",
+   "fieldtype": "Float",
+   "label": "Qty Per Pallet"
+  },
+  {
+   "fieldname": "amt_pallet",
+   "fieldtype": "Float",
+   "label": "Amt Pallet"
+  },
+  {
+   "fieldname": "section_break_zryh",
+   "fieldtype": "Section Break",
+   "label": "This Section is for Handover process only if any"
+  },
+  {
+   "fieldname": "qty_handover",
+   "fieldtype": "Float",
+   "label": "Qty Handover"
+  },
+  {
+   "default": "0",
+   "fieldname": "has_handovered",
+   "fieldtype": "Check",
+   "label": "Has Handovered?",
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_lzby",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "user_handovered",
+   "fieldtype": "Link",
+   "label": "User Handovered",
+   "options": "User"
+  },
+  {
+   "fieldname": "time_handovered",
+   "fieldtype": "Datetime",
+   "label": "Time Handovered"
+  },
+  {
+   "fieldname": "item_details_section",
+   "fieldtype": "Section Break",
+   "label": "Item Details"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-02-18 11:10:51.737801",
+ "modified": "2026-02-23 17:20:03.589731",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Warehouse Task Detail",

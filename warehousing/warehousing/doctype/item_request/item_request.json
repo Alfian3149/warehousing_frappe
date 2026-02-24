@@ -10,10 +10,13 @@
   "amended_from",
   "naming_series",
   "purpose",
-  "posting_date",
   "column_break_igkz",
   "required_by",
+  "posting_date",
+  "column_break_dvie",
   "target_location",
+  "requestor_by",
+  "status",
   "section_break_ngrt",
   "doctype_source",
   "column_break_pjnk",
@@ -22,8 +25,8 @@
   "items",
   "section_break_deru",
   "get_stock_item",
-  "picklist_button_area",
   "item_picklist",
+  "picklist_history_and_status",
   "picklist_tracking_tab"
  ],
  "fields": [
@@ -71,6 +74,7 @@
    "label": "Required By"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "target_location",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -85,6 +89,7 @@
    "label": "Summary Request"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "items",
    "fieldtype": "Table",
    "options": "Item Request Detail"
@@ -115,7 +120,7 @@
    "label": "Picklist"
   },
   {
-   "description": "When this action confirmed, system will search the material by FIFO to fullfill the the requirement in summary request.\n<br> (Actions via this button do not yet book stock. Booking is done when confirming the picklist.)",
+   "description": "When this action confirmed, system will search the material by FIFO to fullfill the requirement in summary request.\n<br> (Actions via this button do not yet book stock. Booking is done when confirming the picklist.)",
    "fieldname": "get_stock_item",
    "fieldtype": "Button",
    "label": "Get Stock Item"
@@ -132,8 +137,25 @@
    "label": "Picklist Tracking"
   },
   {
-   "fieldname": "picklist_button_area",
+   "fieldname": "requestor_by",
+   "fieldtype": "Link",
+   "label": "Requestor By",
+   "options": "User"
+  },
+  {
+   "fieldname": "column_break_dvie",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "picklist_history_and_status",
    "fieldtype": "HTML"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Open\nPartially Picked\nFully Picked"
   }
  ],
  "grid_page_length": 50,
@@ -141,7 +163,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-05 18:31:42.752530",
+ "modified": "2026-02-24 06:32:54.537980",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Item Request",

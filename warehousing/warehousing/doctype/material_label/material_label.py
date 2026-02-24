@@ -78,7 +78,6 @@ def sync_material_labels(data, parent_doc_name):
             })
             new_doc.insert()
 
-    frappe.db.commit()
     return {"status": "success", "message": "Sinkronisasi Berhasil"}
  
 @frappe.whitelist()

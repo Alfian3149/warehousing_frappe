@@ -6,7 +6,7 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "master_id",
+  "site",
   "part",
   "description",
   "um",
@@ -19,11 +19,6 @@
   "to_location"
  ],
  "fields": [
-  {
-   "fieldname": "master_id",
-   "fieldtype": "Data",
-   "label": "Master ID"
-  },
   {
    "fieldname": "part",
    "fieldtype": "Link",
@@ -86,13 +81,18 @@
    "fieldtype": "Int",
    "label": "Qty[PALLET]",
    "reqd": 1
+  },
+  {
+   "fieldname": "site",
+   "fieldtype": "Data",
+   "label": "Site"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-02-05 11:33:54.241190",
+ "modified": "2026-02-20 13:19:22.083232",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Item Picklist Detail",

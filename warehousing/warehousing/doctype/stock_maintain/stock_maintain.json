@@ -19,9 +19,11 @@
   "po_line",
   "section_break_yzei",
   "part",
-  "lotserial_automatic",
+  "um",
+  "description",
   "column_break_hwkq",
   "lot_serial",
+  "lotserial_automatic",
   "column_break_pwrb",
   "reference",
   "column_break_dpaf",
@@ -143,7 +145,8 @@
    "fieldname": "status",
    "fieldtype": "Link",
    "label": "Status",
-   "options": "Inventory Status"
+   "options": "Inventory Status",
+   "reqd": 1
   },
   {
    "fieldname": "source_type",
@@ -181,13 +184,27 @@
    "fieldtype": "Check",
    "hidden": 1,
    "label": "Lot/Serial Automatic"
+  },
+  {
+   "fetch_from": "part.um",
+   "fieldname": "um",
+   "fieldtype": "Data",
+   "label": "UM",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "part.description",
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-05 18:39:35.967368",
+ "modified": "2026-02-20 12:18:31.026852",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Stock Maintain",

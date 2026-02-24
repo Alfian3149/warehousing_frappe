@@ -656,8 +656,6 @@ frappe.ui.form.on("Material Incoming", {
                                         return;
                                     }
                                 });
-
-
                                 let child = frm.add_child('material_incoming_item');
                                 child.pod_line = row.podline;
                                 child.item_number = row.podpart;
@@ -727,7 +725,7 @@ frappe.ui.form.on("Material Incoming", {
             frm.refresh_field('material_incoming_item');
         }); 
     },
-
+ 
     create_physical_verification_task: function(frm, task_type, assign_to_person, assign_to_role, date_instruction, time_transaction) {
         frappe.call({
             method: "warehousing.warehousing.doctype.warehouse_task.warehouse_task.create_physical_verification_task", // Memanggil fungsi backend

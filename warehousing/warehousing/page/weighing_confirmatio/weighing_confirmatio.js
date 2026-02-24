@@ -1,7 +1,7 @@
 frappe.pages['weighing-confirmatio'].on_page_load = function(wrapper) {
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: 'Weighing & Blending Confirmation',
+		title: 'Production Confirmation',
 		single_column: true
 	});
 
@@ -17,6 +17,7 @@ frappe.pages['weighing-confirmatio'].on_page_load = function(wrapper) {
 							<th>Work Order</th>
 							<th>Finish Good</th>
 							<th>Description</th>
+							<th>Due Date</th>
 							<th>Quantity</th>
 							<th>Status</th>
 							<th>Aksi</th>
@@ -60,7 +61,7 @@ window.load_work_orders = function() {
         method: 'frappe.client.get_list',
         args: {
             doctype: 'Work Order Split',
-            fields: ['name', 'status','finish_good', 'fg_description', 'quantity_to_be_produced_immediately'],
+            fields: ['name', 'status','finish_good', 'fg_description', 'quantity_to_be_produced_immediately','due_date'],
 			filters: { 'status': ['in', ['Ready for Weighing', 'Ready for Blending', 'In Weighing', 'Blending Completed']] },
         },
         callback: function(r) {
@@ -77,10 +78,10 @@ window.load_work_orders = function() {
                 }
 
                 let action_button = "";
-                if (doc.status === 'Ready for Weighing' || doc.status === 'In Weighing') {
+                if (doc.status === 'Ready For Weighing' || doc.status === 'In Weighing') {
                     action_button = `<button class="btn btn-sm btn-primary" onclick="open_weighing('${doc.name}')">Timbang</button>`;
                 }
-                else if (doc.status === 'Ready for Blending') {
+                else if (doc.status === 'Ready For Blending') {
                     action_button = `<button class="btn btn-sm btn-primary" onclick="open_weighing('${doc.name}')">Blending</button>`;
                 }
                 else {
@@ -92,11 +93,11 @@ window.load_work_orders = function() {
                         <td><strong>${doc.name}</strong></td>
                         <td><strong>${doc.finish_good}</strong></td>
                         <td><strong>${doc.fg_description}</strong></td>
-                        
+                        <td>${doc.due_date}</td>
                         <td>${doc.quantity_to_be_produced_immediately}</td>
                         <td>
-                        <span class="indicator ${indicator_class}"></span>
-                        <strong>${doc.status}</strong>
+                            <span class="indicator ${indicator_class}"></span>
+                            <strong>${doc.status}</strong>
                         </span>
                         </td>
                         <td>${action_button}
@@ -121,35 +122,68 @@ window.open_weighing = function(wo_name) {
         args: {
             doctype: 'Work Order Split',
             filters: { 'name': wo_name, 'docstatus': 1 },
-            fieldname: 'name'
+            fieldname: 'link_to_item_request'
         },
         callback: function(r) {
             if (r.message) {
-                render_items(r.message.name);
+                //alert("Item Request: " + r.message.link_to_item_request);
+                render_items(r.message.link_to_item_request);
             }
         }
     });
 };
 
-function render_items(handover_id) {
-    frappe.model.with_doc('Work Order Split', handover_id, function() {
-        let items = frappe.get_doc('Work Order Split', handover_id).work_order_split_detail;
-        let tbody = $('#weighing-items-body').empty();
-        
-        items.forEach((item, i) => {
-            tbody.append(`
-                <tr>
-                    <td>${item.part}<br><small>${item.description}</small></td>
-                    <td><span class="badge badge-warning">LOT1</span></td>
-                    <td>${item.actual_required} ${item.um}</td>
-                    <td class="text-center">
-                        <input type="checkbox" class="item-check    " data-item="${item.part}" data-batch="${item.batch_no}" data-qty="${item.actual_required}">
-                    </td>
-                </tr>
-            `);
-        });
+function render_items(item_request_name) {
+    let tbody = $('#weighing-items-body').empty();
+    
+    // Tampilkan loading sementara
+    tbody.append('<tr><td colspan="4" class="text-center">Memuat data...</td></tr>');
+
+    frappe.call({
+        // Ganti 'your_app.api.get_warehouse_task_items' sesuai lokasi file python Anda
+        method: "warehousing.api.get_warehouse_task_items", 
+        method: "warehousing.warehousing.doctype.warehouse_task.warehouse_task.get_warehouse_task_items",
+        args: {
+            item_request_name: item_request_name
+        },
+        callback: function(r) {
+            tbody.empty(); // Bersihkan loading
+            
+            let details = r.message || [];
+            
+            if (details.length > 0) {
+                details.forEach((item) => {
+                    tbody.append(`
+                        <tr>
+                            <td>
+                                <strong>${item.item}</strong><br>
+                                <small class="text-muted">${item.description || ''}</small>
+                            </td>
+                            <td>
+                                <span class="badge badge-warning" style="background-color: #f39c12; color: white; padding: 2px 5px; border-radius: 4px;">
+                                    ${item.lotserial || '-'}
+                                </span>
+                            </td>
+                            <td>${item.qty_label} ${item.um || ''}</td>
+                            <td class="text-center">
+                                <input type="checkbox" class="item-check" 
+                                    data-item="${item.item}" 
+                                    data-batch="${item.lotserial}" 
+                                    data-qty="${item.qty_label}">
+                            </td>
+                        </tr>
+                    `);
+                });
+            } else {
+                tbody.append('<tr><td colspan="4" class="text-center">Data item tidak ditemukan.</td></tr>');
+            }
+        },
+        error: function(r) {
+            tbody.empty().append('<tr><td colspan="4" class="text-center text-danger">Terjadi kesalahan akses data.</td></tr>');
+        }
     });
-}
+}   
+
 
 // 4. Submit Data secara Background
 window.submit_weighing = function() {

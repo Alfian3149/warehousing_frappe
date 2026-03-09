@@ -22,14 +22,17 @@
   "order_date",
   "ship_date",
   "transaction_date",
+  "due_date",
   "column_break_elbh",
   "receiver",
   "packing_slip",
   "supplier_and_delivery_information_section",
   "supplier",
+  "supplier_name",
   "supplier_address",
   "column_break_prdo",
   "shipto",
+  "shipto_name",
   "shipto_address",
   "field_for_auto",
   "full_receipt_for_all_lines",
@@ -89,8 +92,8 @@
   },
   {
    "fieldname": "packing_slip",
-   "fieldtype": "Data",
-   "label": "Packing Slip"
+   "fieldtype": "Small Text",
+   "label": "Delivery Info"
   },
   {
    "fieldname": "column_break_xyzd",
@@ -109,6 +112,7 @@
   {
    "fieldname": "ship_date",
    "fieldtype": "Date",
+   "hidden": 1,
    "label": "Ship Date"
   },
   {
@@ -221,7 +225,7 @@
   {
    "fieldname": "po_tracking_tab",
    "fieldtype": "Tab Break",
-   "label": "PO Tracking"
+   "label": "Order Tracking"
   },
   {
    "fieldname": "po_tracking_html",
@@ -364,13 +368,28 @@
    "fieldname": "putaway_transfer_html",
    "fieldtype": "HTML",
    "label": "physical_verification_html"
+  },
+  {
+   "fieldname": "supplier_name",
+   "fieldtype": "Data",
+   "label": "Name"
+  },
+  {
+   "fieldname": "shipto_name",
+   "fieldtype": "Data",
+   "label": "Name"
+  },
+  {
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "label": "Due Date"
   }
  ],
  "grid_page_length": 50,
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-24 17:29:11.249080",
+ "modified": "2026-03-06 10:45:11.424691",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Material Incoming",

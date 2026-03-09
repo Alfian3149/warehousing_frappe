@@ -6,11 +6,22 @@ from frappe.model.document import Document
 from frappe.model.naming import getseries
 from frappe.utils import getdate, nowdate
 from frappe.model.mapper import get_mapped_doc
-
+from frappe import _
+from frappe.utils import flt
 class MaterialIncoming(Document):
+	def before_insert(self):
+		self.status = "Draft"
+
+	def on_trash(self):
+		frappe.db.delete("Material Label", {"material_incoming_link": self.name})
+
 	def validate(self):
 		self.ensure_item_details_exist_in_master()
+		
+		self.expire_date_check()
+
 		if self.doc_status == 1 and self.status == "Submitted":
+			self.assign_conversion_factor()
 			if not self.submitted_date:
 				self.submitted_date = frappe.utils.now_datetime()
 				
@@ -48,14 +59,17 @@ class MaterialIncoming(Document):
 
 							remaining_qty -= current_qty
 						frappe.db.commit()
-	
+			frappe.msgprint(
+				msg="Submitted successfully",
+				alert=True,
+				indicator="green"
+			)
 	def ensure_item_details_exist_in_master(self):
 		for row in self.material_incoming_item:
 
 			if not frappe.db.exists("Part Master", row.item_number):
-				self.create_new_item(row)
-				
-
+				self.create_new_item(row)		
+	
 	def create_new_item(self, row):
 		new_item = frappe.get_doc({
 			"doctype": "Part Master",
@@ -63,12 +77,61 @@ class MaterialIncoming(Document):
 			"um": row.um,
 			"description": row.item_description,
 			"qty_per_pallet": row.qty_per_pallet,
-		})
+		}) 
 		new_item.insert()
 	
-	def before_insert(self):
-		self.status = "Draft"
+	def assign_conversion_factor(self):
+		for row in self.material_incoming_item:
+			if row.qty_to_receive == 0 : 
+				continue
+			#part_master = frappe.get_doc("Part Master", row.item_number)
+			if row.conversion_factor == 0 or not row.um_conversion:
+				result = frappe.db.get_value("Um Conversion Factor", {"parent": row.item_number, "default": True}, ["conversion_factor", "in_packaging_um"])
+				if result:
+					row.conversion_factor, row.um_conversion = result
+				else:
+					frappe.throw("Default unit of measure conversion must be defined in Um Conversion Factor for item " + row.item_number, frappe.ValidationError)
 
+	def expire_date_check(self):
+		line_item = self.material_incoming_item
+		if line_item:
+			for item in line_item:
+				expire_required = frappe.db.get_value("Part Master", item.item_number, "expire_date_required")
+				if expire_required and not item.expired_date:
+					frappe.throw(_("Expired date must be filled for item " + item.item_number), frappe.ValidationError)
+					return
+
+	def validate_qty_to_receive(self):
+		line_item = self.material_incoming_item
+		for d in line_item:
+			if d.qty_to_receive <= 0:
+				frappe.throw(_("Qty to receive must be greater than 0 for item " + d.item_number), frappe.ValidationError)
+				return		
+
+@frappe.whitelist()
+def max_qty_receive_allowed(order_number, order_line, name): 
+	parent_names = frappe.get_all("Material Incoming", 
+		filters={
+			"purchase_order": order_number,
+			"name": ["!=", name]
+			}, 
+		pluck="name"
+	)
+
+	# 2. Cek jika parent_names kosong agar tidak error di query selanjutnya
+	if not parent_names:
+		incoming = []
+	else:
+		# 3. Ambil data child table
+		incoming = frappe.get_all("Material Incoming Item",
+			filters={
+				"pod_line": order_line,
+				"parent": ["in", parent_names]
+			},
+			fields=["qty_to_receive", "qty_order", "qty_received"]
+		)
+	return incoming
+	
 @frappe.whitelist()
 def make_material_label(source_name, target_doc=None):
 	doc = get_mapped_doc(
@@ -95,14 +158,14 @@ def get_po_history_with_items(purchase_order, current_doc):
             "name": ["!=", current_doc],
             #"docstatus": ["<", 2]
         },
-        fields=["name", "order_date", "site", "transaction_date", "status"],
+        fields=["name", "order_date", "site", "transaction_date", "status", "modified"],
         order_by="transaction_date desc"
     )
 
     # Ambil semua item untuk dokumen-dokumen tersebut
     for doc in history:
         doc['items'] = frappe.db.get_all("Material Incoming Item",
-            filters={"parent": doc.name},
+            filters={"parent": doc.name, "qty_to_receive": [">", 0]  },
             fields=["pod_line", "item_number", "item_description", "qty_to_receive", "um"]
         )
     

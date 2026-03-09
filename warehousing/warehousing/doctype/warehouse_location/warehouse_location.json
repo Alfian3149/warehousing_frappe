@@ -15,6 +15,8 @@
   "parent_warehouse_location",
   "total_capacity",
   "um",
+  "section_break_yubr",
+  "total_reserved",
   "section_break_izbu",
   "status",
   "section_break_hg9h",
@@ -102,7 +104,7 @@
   {
    "fieldname": "um",
    "fieldtype": "Link",
-   "label": "UM",
+   "label": "UM Capacity",
    "options": "Uom"
   },
   {
@@ -114,13 +116,22 @@
    "fieldtype": "Select",
    "label": "Status",
    "options": "Available\nReserved\nOccupied"
+  },
+  {
+   "fieldname": "section_break_yubr",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "total_reserved",
+   "fieldtype": "Float",
+   "label": "Total Reserved"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_tree": 1,
  "links": [],
- "modified": "2026-02-03 07:40:54.471903",
+ "modified": "2026-03-03 01:58:08.461716",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Warehouse Location",

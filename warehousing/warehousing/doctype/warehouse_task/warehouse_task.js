@@ -131,11 +131,21 @@ frappe.ui.form.on('Warehouse Task Detail', {
             frappe.model.set_value(row.doctype, row.name, 'executor', frappe.session.user);
             frappe.model.set_value(row.doctype, row.name, 'execution_time', frappe.datetime.now_datetime());
             frm.refresh_field('warehouse_task_detail');
-        }
-    );
+        });
+    },
 
+    has_handovered: function(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        if (row.has_handovered) {
+            frappe.model.set_value(row.doctype, row.name, 'time_handovered', frappe.datetime.now_datetime());
+            frappe.model.set_value(row.doctype, row.name, 'user_handovered', frappe.session.user);
+        } else {
+            frappe.model.set_value(row.doctype, row.name, 'time_handovered', null);
+            frappe.model.set_value(row.doctype, row.name, 'user_handovered', null);
+        }
     }
 });
+
 
 var check_discrepancy = function(frm, row, callback) {
     if (row.qty_confirmation > row.qty_label){
@@ -258,6 +268,7 @@ var target_location_confirmation = function(frm, row) {
             
             frappe.model.set_value(row.doctype, row.name, 'locationdestination', values.target_location);
             frappe.model.set_value(row.doctype, row.name, 'status', 'Completed');
+            frappe.model.set_value(row.doctype, row.name, 'verified', 1);
             e.hide();
             setTimeout(() => { frm.save(); }, 50);
         },

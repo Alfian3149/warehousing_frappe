@@ -69,7 +69,7 @@ def get_fifo_picklist_with_reserved(item_request_doc, item_status):
 
             #TANPA FILTER LOKASI KARENA BARANG BISA JADI SUDAH BERPINDAH
             res_reserved = frappe.db.get_list("Reserved Task Entry", 
-            {"purpose":"Picking","site": stock_oh.site, "part": stock_oh.part, "lot_serial": stock_oh.lot_serial, "warehouse_location": stock_oh.warehouse_location}, 
+            {"purpose":"Picking","site": stock_oh.site, "part": stock_oh.part, "lot_serial": stock_oh.lot_serial}, 
             ["SUM(qty) as qty"])
             
             stock_reserved = flt(res_reserved[0].qty) if res_reserved else 0
@@ -129,7 +129,7 @@ def update_inventory_qty(doctype, doctype_link, transType, postingDate, site, pa
     else:
         if in_out == "OUT" : 
             frappe.throw(
-                msg=_("Inventory does not exist to {0} process").format(transType),
+                msg=_("Inventory does not exist to {0} process").format(f"{transType} {part} {lot_serial} {whs_location}"),
                 title=_("ERROR"),
                 exc=frappe.ValidationError
             )

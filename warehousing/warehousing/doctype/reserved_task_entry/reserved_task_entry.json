@@ -6,19 +6,19 @@
  "engine": "InnoDB",
  "field_order": [
   "purpose",
+  "doctype_source",
+  "task",
   "site",
   "part",
   "lot_serial",
   "warehouse_location",
-  "doctype_source",
-  "task",
   "qty"
  ],
  "fields": [
   {
    "fieldname": "warehouse_location",
    "fieldtype": "Link",
-   "label": "Warehouse Location",
+   "label": "Origin Source Location",
    "options": "Warehouse Location",
    "search_index": 1
   },
@@ -72,7 +72,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-20 05:58:51.634702",
+ "modified": "2026-02-25 11:21:39.537043",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Reserved Task Entry",

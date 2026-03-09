@@ -3,6 +3,7 @@
 
 frappe.ui.form.on('Item Request', {
 	refresh(frm) {
+        frm.trigger('reserved_material_detail');
 		frm.add_custom_button(__('Confirming Picklist'), function() {
             if (!frm.doc.item_picklist || frm.doc.item_picklist.length === 0) {
                 frappe.msgprint({
@@ -167,4 +168,90 @@ frappe.ui.form.on('Item Request', {
         
     }, 
     
+    reserved_material_detail: function(frm) {
+        frappe.call({
+            method: 'frappe.client.get_list',
+            args: {
+                doctype: 'Reserved Task Entry',
+                filters: { 'doctype_source': 'Item Request', 'task': frm.doc.name },
+                fields: ['site', 'part', 'lot_serial','warehouse_location','qty', 'creation','task'],
+                order_by: 'site asc, part asc, lot_serial asc',
+            },
+            callback: function(r) {
+                let container = frm.get_field('reserved_task_entry').$wrapper;
+                //alert(JSON.stringify(r.message));
+                if (r.message && r.message.length > 0) {
+                    let html = `
+                        <table class="table table-bordered" style="font-size: 13px;">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Request Info</th>
+                                    <th>Item Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                    let item_rows = '';
+                    let no = 0;
+                    r.message.forEach(row => {          
+                        let qty_per_pallet = 0;
+                         let amt_pallet = 0;
+                        frappe.db.get_value('Part Master', row.part, 'qty_per_pallet')
+                            .then(r => {
+                                qty_per_pallet = r.message.qty_per_pallet || 0;
+                                amt_pallet = Math.ceil(row.qty / qty_per_pallet);
+                            });
+                                
+                        //alert('qty_per_pallet: ' + qty_per_pallet);
+                        let format_user = frappe.datetime.str_to_user(row.creation);
+                        item_rows += `
+                                <tr>
+                                
+                                    <td>${++no}</td>
+                                    <td>${row.site || ''}</td>
+                                    <td>${row.part || ''}</td>
+                                    <td>${row.lot_serial || ''}</td>
+                                    <td>${row.warehouse_location || ''}</td>
+                                    <td class="text-right">${row.qty || 0}</td>
+                                    <td class="text-right">${amt_pallet || 0}</td>
+                                </tr>
+                            `;
+                    });   
+                        html += `
+                            <tr>
+                                <td class="bg-light" style="width: 30%;">
+                                    <b><a href="/app/material-incoming/"></a></b><br>
+                                    <small></small><br>
+                                    <span class="label label-info"></span>
+                                </td>
+                                <td style="padding: 0;">
+                                    <table class="table table-sm mb-0" style="border:none;">
+                                        <thead>
+                                            <tr class="text-muted small">
+                                                <th>No.</th>
+                                                
+                                                <th>Site</th>
+                                                <th>Item</th>
+                                                <th>Lotserial</th>
+                                                <th class="text-right">Original Loc</th>
+                                                <th>Qty</th>
+                                                <th>Amt(Pallet)</th>
+                                                <th>Current Loc</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${item_rows}
+                                        </tbody>
+                                    </table>
+                                </td>
+                            </tr>`;
+                    
+                    //alert(item_rows);
+                    html += `</tbody></table>`;
+                    container.html(html);
+                } else {
+                    container.html('<div class="text-muted p-3">Belum ada riwayat kedatangan.</div>');
+                }
+            }
+        });
+    },
 })

@@ -6,6 +6,17 @@ frappe.ui.form.on("Material Incoming", {
         frm.disable_save_notification = true;
         frm.set_df_property('status', 'read_only', 0);
         frm.set_df_property('doc_status', 'hidden', 1);
+
+        frm.fields_dict['purchase_order'].$input.on('blur', function() {
+            if (frm.doc.purchase_order && !frm.doc.status) { // Pastikan ada nomor PO dan dokumen sudah disimpan sebelumnya
+                frm.trigger('fetch_po_from_qad');
+                setTimeout(() => { 
+                    frm.trigger('load_po_history');
+                }, 500);
+                
+            }
+        });
+
         if (frm.doc.doc_status === 1){
            // frm.set_read_only();
             frm.page.clear_primary_action();
@@ -36,6 +47,7 @@ frappe.ui.form.on("Material Incoming", {
             frm.set_read_only();
             frm.page.clear_primary_action();
         }
+
         if (!frm.is_new() && frm.doc.doc_status === 0 && frm.doc.status === "Draft") {
             frm.page.set_primary_action(__('Submit'), function() {
                 frappe.confirm(
@@ -44,15 +56,16 @@ frappe.ui.form.on("Material Incoming", {
                         //frappe.msgprint("test");
                         frm.set_value("status", "Submitted"); // Set status menjadi Submitted
                         frm.set_value("doc_status", 1); // Set status menjadi Submitted
-                    
-                        frm.save().then(() => {
-                            frappe.hide_msgprint();
-                            frappe.utils.play_sound("submit");
-                            frappe.show_alert({
+                        
+                        frappe.hide_msgprint();
+                        //frappe.utils.play_sound("submit");
+                        frm.save(); //.then(() => {
+                            /* frappe.show_alert({
                                 message: __('Document Submitted'),
                                 indicator: 'green'
-                            });
-                        });
+                            }); */
+                        //});
+                        
 
                     },
                     function() {
@@ -446,158 +459,166 @@ frappe.ui.form.on("Material Incoming", {
         }, __("Labeling & Verification"));
 
         // --- GRUP 2: RECEIPT & PUTAWAY ---
-        frm.add_custom_button(__('Confirm PO Receipt'), function() {
-            // Konfirmasi ke user sebelum eksekusi
-            frappe.confirm('Apakah Anda yakin ingin melakukan PO Receipt Confirmation ke QAD?', () => {
-                frappe.call({
-                    method: "warehousing.warehousing.allAPI.po_receipt_confirmation",
-                    args: {
-                        parent_doc_name: frm.doc.physical_verification_id,
-                        material_incoming_name: frm.doc.name
-                    },
-                    freeze: true,
-                    freeze_message: __("Sedang memproses PO Receipt Confirmation..."),
-                    callback: function(r) {
-                        if (r.message.status === "failed") {
-                            frappe.show_alert({ message: __(r.message.message), indicator: 'red' });
-                            dialog.hide();
-                        }
-                        else {
-                            frm.set_value('receiver', r.message.receiver);
-                            frm.set_value('confirmed_date', frappe.datetime.now_datetime());
-                            frm.set_value('status', 'Confirmed');
-                            frm.save().then(() => {
-                                frappe.utils.play_sound("submit");
-                                frappe.show_alert({
-                                message: __('PO Receipt QAD succesfully'),
-                                indicator: 'green'
-                                 });
-                            });
-                        }
-                    }
-                });
-            });
-        }, __("Receipt & Putaway"));
-
-        frm.add_custom_button(__('Assign Transfer Task'), function() {
-            if (ds === 0) {
-                frappe.msgprint({
-                    title: __('ERROR'),
-                    indicator: 'red',
-                    message: __('Please submit the document before asigning a task.')
-                });
-                return;
-            }
-            else if(ds === 2){
-                frappe.msgprint({
-                    title: __('ERROR'),
-                    indicator: 'red',
-                    message: __('Document already cancelled.')
-                });
-                return
-            }
-            let f = new frappe.ui.Dialog({
-                title: __('Create Task For Material Transfer'),
-                fields: [
-                    {
-                        label: __('Task Type'),
-                        fieldname: 'task_type',
-                        fieldtype: 'Select',
-                        options: ['Picking', 'Physical Verification', 'Putaway Transfer', 'Putaway'],
-                        default: 'Putaway Transfer',
-                        columns: 10,
-                        read_only: 1
-                    },
-                    {
-                        label: __('Task ID'),
-                        fieldname: 'putaway_transfer_task_id',
-                        fieldtype: 'Data',
-                        default: frm.doc.putaway_transfer_task_id,
-                        columns: 10,
-                        read_only: 1
-                    },
-                    {
-                        fieldtype: 'Section Break'
-                    },
-                    {
-                        label: __('Assign To Person'),
-                        fieldname: 'assign_to_person',
-                        fieldtype: 'Link',
-                        options: 'User',
-                        columns: 10,
-                        default: frm.doc.pt_person_assigned
-                    },
-                    {
-                        label: __('Date Instruction'),
-                        fieldname: 'date_instruction',
-                        fieldtype: 'Date',
-                        columns: 6,
-                        default: frm.doc.pt_date_instruction_given ? frm.doc.pt_date_instruction_given : frappe.datetime.get_today()
-                    },
-                    {
-                        fieldtype: 'Column Break'
-                    },
         
-                    { 
-                        label: __('Assign To Role'),
-                        fieldname: 'assign_to_role',
-                        fieldtype: 'Link',
-                        options: 'Role',
-                        columns: 6,
-                        default: frm.doc.pt_role_assigned
-                    },
-                    {
-                        label: __('Time'),
-                        fieldname: 'time',
-                        fieldtype: 'Time',
-                        columns: 6,
-                        default: frm.doc.pt_time_instruction_given ? frm.doc.pt_time_instruction_given : frappe.datetime.now_time()
-                    }
-                ],
-                size: 'medium',
-                primary_action_label: __('Submit'),
-                primary_action(values) {
-                    frappe.db.get_value('Warehouse Task', {'reference_name': cur_frm.doc.name, 'task_type': values.task_type}, 'name')
-                    .then(r => {
-                        if (r.message.name) {
-                            msgprint({
-                                title: __('ERROR'),
-                                indicator: 'red',
-                                message: __('A task for this document already exists: {0}', [r.message.name])
-                            });
+            frm.add_custom_button(__('Confirm PO Receipt'), function() {
+                if (frm.doc.status !== "Assigned") {
+                    frappe.msgprint("You are not allowed to reveive PO");
+                    return;
+                }
+                // Konfirmasi ke user sebelum eksekusi
+                frappe.confirm('Apakah Anda yakin ingin melakukan PO Receipt Confirmation ke QAD?', () => {
+                    frappe.call({
+                        method: "warehousing.warehousing.allAPI.po_receipt_confirmation",
+                        args: {
+                            parent_doc_name: frm.doc.physical_verification_id,
+                            material_incoming_name: frm.doc.name
+                        },
+                        freeze: true,
+                        freeze_message: __("Sedang memproses PO Receipt Confirmation..."),
+                        callback: function(r) {
+                            if (r.message.status === "failed") {
+                                frappe.show_alert({ message: __(r.message.message), indicator: 'red' });
+                                dialog.hide();
+                            }
+                            else {
+                                frm.set_value('receiver', r.message.receiver);
+                                frm.set_value('confirmed_date', frappe.datetime.now_datetime());
+                                frm.set_value('status', 'Confirmed');
 
-                            return; 
-                        }
-                        else{
-                            frm.events.create_putaway_transfer_task(frm, values.task_type, values.assign_to_person, values.assign_to_role, values.date_instruction, values.time);
-                            d.hide();
+                                frm.events.create_putaway_transfer_task(frm, "Putaway Transfer", null, "Warehouse Picker", frappe.datetime.get_today(), frappe.datetime.now_time() );
+
+                                setTimeout(() => { 
+                                    frm.save().then(() => {
+                                        frappe.utils.play_sound("submit");
+                                        frappe.show_alert({
+                                        message: __('PO Receipt QAD succesfully'),
+                                        indicator: 'green'
+                                        });
+                                    });
+                                }, 700);
+                            }
                         }
                     });
-                    
+                });
+            }, __("Receipt & Putaway"));
+    
+
+        if (frm.doc.status === "Confirmed") {
+            frm.add_custom_butto(__('Assign Transfer Task'), function() {
+                if (ds === 0) {
+                    frappe.msgprint({
+                        title: __('ERROR'),
+                        indicator: 'red',
+                        message: __('Please submit the document before asigning a task.')
+                    });
+                    return;
                 }
-            });
+                else if(ds === 2){
+                    frappe.msgprint({
+                        title: __('ERROR'),
+                        indicator: 'red',
+                        message: __('Document already cancelled.')
+                    });
+                    return
+                }
+                let f = new frappe.ui.Dialog({
+                    title: __('Create Task For Material Transfer'),
+                    fields: [
+                        {
+                            label: __('Task Type'),
+                            fieldname: 'task_type',
+                            fieldtype: 'Select',
+                            options: ['Picking', 'Physical Verification', 'Putaway Transfer', 'Putaway'],
+                            default: 'Putaway Transfer',
+                            columns: 10,
+                            read_only: 1
+                        },
+                        {
+                            label: __('Task ID'),
+                            fieldname: 'putaway_transfer_task_id',
+                            fieldtype: 'Data',
+                            default: frm.doc.putaway_transfer_task_id,
+                            columns: 10,
+                            read_only: 1
+                        },
+                        {
+                            fieldtype: 'Section Break'
+                        },
+                        {
+                            label: __('Assign To Person'),
+                            fieldname: 'assign_to_person',
+                            fieldtype: 'Link',
+                            options: 'User',
+                            columns: 10,
+                            default: frm.doc.pt_person_assigned
+                        },
+                        {
+                            label: __('Date Instruction'),
+                            fieldname: 'date_instruction',
+                            fieldtype: 'Date',
+                            columns: 6,
+                            default: frm.doc.pt_date_instruction_given ? frm.doc.pt_date_instruction_given : frappe.datetime.get_today()
+                        },
+                        {
+                            fieldtype: 'Column Break'
+                        },
+            
+                        { 
+                            label: __('Assign To Role'),
+                            fieldname: 'assign_to_role',
+                            fieldtype: 'Link',
+                            options: 'Role',
+                            columns: 6,
+                            default: frm.doc.pt_role_assigned
+                        },
+                        {
+                            label: __('Time'),
+                            fieldname: 'time',
+                            fieldtype: 'Time',
+                            columns: 6,
+                            default: frm.doc.pt_time_instruction_given ? frm.doc.pt_time_instruction_given : frappe.datetime.now_time()
+                        }
+                    ],
+                    size: 'medium',
+                    primary_action_label: __('Submit'),
+                    primary_action(values) {
+                        frappe.db.get_value('Warehouse Task', {'reference_name': cur_frm.doc.name, 'task_type': values.task_type}, 'name')
+                        .then(r => {
+                            if (r.message.name) {
+                                msgprint({
+                                    title: __('ERROR'),
+                                    indicator: 'red',
+                                    message: __('A task for this document already exists: {0}', [r.message.name])
+                                });
 
-            if (frm.doc.putaway_transfer_task_id){ 
-                f.get_primary_btn().hide();
-            }
-            f.show();
-        }, __("Receipt & Putaway"));
+                                return; 
+                            }
+                            else{
+                                frm.events.create_putaway_transfer_task(frm, values.task_type, values.assign_to_person, values.assign_to_role, values.date_instruction, values.time);
+                                d.hide();
+                            }
+                        });
+                        
+                    } 
+                });
 
-        // Menargetkan input po_number
-        frm.fields_dict['purchase_order'].$input.on('blur', function() {
-            if (frm.doc.purchase_order) {
-                frm.trigger('fetch_po_from_qad');
-            }
-        });
+                if (frm.doc.putaway_transfer_task_id){ 
+                    f.get_primary_btn().hide();
+                }
+                f.show();
+            }, __("Receipt & Putaway"));
+        }
+
 
         frm.set_df_property('material_incoming_item', 'cannot_add_rows', true);
 
-        if (frm.doc.purchase_order) {
-            frm.trigger('load_po_history');
-        }
  	},
 
     onload: function(frm) {
+                // Menargetkan input po_number
+        if (frm.doc.purchase_order) {
+            frm.trigger('load_po_history');
+        } 
         // Mengatur variabel timer di dalam object frm agar tidak konflik
         frm.typing_timer = null;
         frm.debounce_delay = 1000; // Atur waktu tunggu di sini (1000ms = 1 detik)
@@ -656,16 +677,27 @@ frappe.ui.form.on("Material Incoming", {
                                         return;
                                     }
                                 });
+
                                 let child = frm.add_child('material_incoming_item');
                                 child.pod_line = row.podline;
                                 child.item_number = row.podpart;
                                 child.item_description = row.ptdesc1 + " " + row.ptdesc2;
                                 child.um = row.ptum;
-                                child.qty_per_pallet = row.pt_qtypallet;
                                 child.qty_open = row.pod_qtyord - row.pod_qtyrcvd;
                                 child.qty_order = row.pod_qtyord;
                                 child.qty_received = row.pod_qtyrcvd;
                                 child.requisition = row.pod_reqnbr;
+
+                                if (row.pt_qtypallet > 0){
+                                    child.qty_per_pallet = row.pt_qtypallet;
+                                }
+                                else{   
+                                    frappe.db.get_value("Part Master", {"name": row.podpart}, "qty_per_pallet").then(value => {
+                                        if (value.message && value.message.qty_per_pallet){ 
+                                            child.qty_per_pallet= value.message.qty_per_pallet;
+                                        } 
+                                    });
+                                }
                             });
                         }
 
@@ -674,13 +706,20 @@ frappe.ui.form.on("Material Incoming", {
                             
                             frm.set_value("site", header.posite);
                             frm.set_value("order_date", header.po_orddate);
+                            frm.set_value("due_date", header.po_duedate);
                             frm.set_value("supplier", header.povend);
-                            frm.set_value("supplier_address", header.line1_vend + "\n" + header.line2_vend + "\n" + header.line3_vend);
+                            frm.set_value("supplier_name", header.name_vend);
+                            frm.set_value("supplier_address", + header.line1_vend + "\n" + header.line2_vend + "\n" + header.line3_vend);
                             frm.set_value("shipto", header.addr_ship);
+                            frm.set_value("shipto_name", header.name_ship);
                             frm.set_value("shipto_address", header.line1_ship + "\n" + header.line2_ship + "\n" + header.line3_ship);
                         }
 
-                        frm.refresh_field('material_incoming_item');
+                        setTimeout(() => { 
+                           frm.refresh_field('material_incoming_item');
+                        }, 500);
+
+                        
                     }
                     else {
                         frappe.msgprint(__("Purchase Order tidak ditemukan."));
@@ -699,6 +738,7 @@ frappe.ui.form.on("Material Incoming", {
             }
             else {
                 d.qty_to_receive = 0;
+                d.total_label = 0;
             }
             frm.refresh_field('material_incoming_item');
         });
@@ -780,14 +820,14 @@ frappe.ui.form.on("Material Incoming", {
                     frm.set_value('pt_date_instruction_given', date_instruction);
                     frm.set_value('pt_time_instruction_given', time_transaction);
                     // Simpan dokumen secara otomatis
-                    frm.save() 
+                    //frm.save() 
                     // MEMBUKA FORM DALAM POP-UP (Quick Entry Mode)
-                    frappe.ui.form.make_quick_entry("Warehouse Task", null, null, r.message.name);
+                    //frappe.ui.form.make_quick_entry("Warehouse Task", null, null, r.message.name);
                     
-                    frappe.show_alert({
-                        message: __(r.message.message),
-                        indicator: 'green'
-                    });
+                    //frappe.show_alert({
+                    //    message: __(r.message.message),
+                    //    indicator: 'green'
+                    //});
                 }
             }
         });
@@ -830,8 +870,9 @@ frappe.ui.form.on("Material Incoming", {
                             <tr>
                                 <td class="bg-light" style="width: 30%;">
                                     <b><a href="/app/material-incoming/${row.name}">${row.name}</a></b><br>
-                                    <small>${frappe.datetime.str_to_user(row.receipt_date)}</small><br>
-                                    <span class="label label-info">${row.status}</span>
+                                    <small>Receipt Date: ${frappe.datetime.str_to_user(row.transaction_date)}</small><br>
+                                    <span class="label label-info">${row.status} on ${frappe.datetime.str_to_user(row.modified)}</span>
+
                                 </td>
                                 <td style="padding: 0;">
                                     <table class="table table-sm mb-0" style="border:none;">
@@ -882,8 +923,60 @@ frappe.ui.form.on("Material Incoming", {
 frappe.ui.form.on('Material Incoming Item', {
     qty_to_receive: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
-        row.total_label = Math.ceil(row.qty_to_receive / row.qty_per_pallet);
-        frm.refresh_field('material_incoming_item');
+
+        if (row.qty_to_receive < 0) {
+            frappe.msgprint(__('Qty to receive must be greater than 0.'));
+            row.qty_to_receive = 0;
+            frm.refresh_field('material_incoming_item');
+        }
+        if (row.qty_per_pallet <= 0) {
+            frappe.msgprint(__('Qty per pallet must be greater than 0 to calculate total labels.'));
+            row.total_label = 0;
+            row.qty_to_receive = 0;
+            frm.refresh_field('material_incoming_item');
+    
+        }
+        if (row.qty_per_pallet && row.qty_per_pallet > 0) {
+            frappe.call({
+                method: "warehousing.warehousing.doctype.material_incoming.material_incoming.max_qty_receive_allowed",
+                args: {
+                    order_number: frm.doc.purchase_order,
+                    order_line: row.pod_line, 
+                    name: frm.doc.name,
+                },
+                callback: function(r) {
+                    if (r.message && r.message.length > 0) {
+                       
+                        let data = r.message;
+                        total_qty_to_receive = 0;
+                        data.forEach((row, index) => {
+                            total_qty_to_receive += row.qty_to_receive;
+                        });
+                         
+                        frappe.db.get_single_value('Material Incoming Control', 'qty_to_receive_tolerance')
+                        .then(value => {
+                            if (value){ 
+                                qty_receive_allowed = row.qty_order + (row.qty_order * (value/100));
+                                qty_max_to_received_allowed = qty_receive_allowed -  (total_qty_to_receive +  row.qty_received)
+                     
+                                if (total_qty_to_receive + row.qty_received + row.qty_to_receive> qty_receive_allowed){
+                                    frappe.msgprint(__("Total Qty to receive for this PO line has exceeded the allowed tolerance. Max allowed: {0} {1} and qty received so far: {2} . Currently you can input qty maximal to receive is: {3}", [qty_receive_allowed, row.um, total_qty_to_receive + row.qty_received, qty_max_to_received_allowed]));
+
+                                    row.qty_to_receive = 0;
+                                    row.total_label = 0;
+                                    frm.refresh_field('material_incoming_item');
+                                    return;
+                                }
+                            }
+                        });
+                    }
+                }           
+            });
+
+            row.total_label = Math.ceil(row.qty_to_receive / row.qty_per_pallet);
+            frm.refresh_field('material_incoming_item');
+             return;
+        }
     }
 });
 
@@ -894,7 +987,6 @@ function sync_filter_item() {
     let f_item = (dialog.get_value("filter_item") || "").toLowerCase().trim();
 
     let grid = dialog.get_field('xx_material_incoming_item').grid;
-    msgprint(f_item);
     grid.grid_rows.forEach(row => {
         let row_item = (row.doc.item || "").toLowerCase();
         let match_item = f_item === "" || row_item.includes(f_item);

@@ -5,6 +5,9 @@ app_description = "Warehouse Management "
 app_email = "service@lukubara.com"
 app_license = "mit"
 
+
+# Izinkan rendering script di website
+allow_tests = True
 # Apps
 # ------------------
 

@@ -27,7 +27,7 @@ frappe.pages['weighing-confirmatio'].on_page_load = function(wrapper) {
                 </table>
             </div>
 
-            <div id="weighing-area" style="display:none;">
+            <div id="weighing-area" style="display:none;font-size: 1.2em;">
                 <button class="btn btn-sm btn-default mb-3" onclick="back_to_list()">⬅ Kembali ke Daftar</button>
                 <h4 id="selected-wo-title"></h4>
                 <div class="card p-3">
@@ -37,7 +37,9 @@ frappe.pages['weighing-confirmatio'].on_page_load = function(wrapper) {
                                 <th>Item</th>
                                 <th>Lot/Batch</th>
                                 <th>Qty</th>
+                                <th class="text-center">Serah Terima?</th>
                                 <th class="text-center">Selesai Timbang?</th>
+                                <th class="text-center">Selesai Blending?</th>
                             </tr>
                         </thead>
                         <tbody id="weighing-items-body"></tbody>
@@ -115,7 +117,7 @@ window.open_weighing = function(wo_name) {
     window.selected_wo = wo_name;
     $('#wo-list-area').hide();
     $('#weighing-area').show();
-    $('#selected-wo-title').text("Menimbang: " + wo_name);
+    $('#selected-wo-title').text("Memproses: " + wo_name);
 
     frappe.call({
         method: 'frappe.client.get_value',
@@ -141,7 +143,7 @@ function render_items(item_request_name) {
 
     frappe.call({
         // Ganti 'your_app.api.get_warehouse_task_items' sesuai lokasi file python Anda
-        method: "warehousing.api.get_warehouse_task_items", 
+        //method: "warehousing.api.get_warehouse_task_items", 
         method: "warehousing.warehousing.doctype.warehouse_task.warehouse_task.get_warehouse_task_items",
         args: {
             item_request_name: item_request_name
@@ -164,12 +166,15 @@ function render_items(item_request_name) {
                                     ${item.lotserial || '-'}
                                 </span>
                             </td>
-                            <td>${item.qty_label} ${item.um || ''}</td>
+                            <td>${item.qty_label}  ${item.um}</td>
                             <td class="text-center">
-                                <input type="checkbox" class="item-check" 
-                                    data-item="${item.item}" 
-                                    data-batch="${item.lotserial}" 
-                                    data-qty="${item.qty_label}">
+                                ${item.has_handovered ? '<span class="badge badge-success">Pass</span>' : '<span class="badge badge-warning">Not Yet</span>'}
+                            </td>
+                            <td class="text-center">
+                                ${item.has_handovered ? (item.has_weighinged ? '<span class="badge badge-success">Pass</span>' : '<input type="checkbox" class="weighing-check" style="transform: scale(1.5); margin: 20px;" data-item="${item.name}">') : ''}
+                            </td>
+                            <td class="text-center">
+                                ${item.has_weighinged ? (item.has_blendinged ? '<span class="badge badge-success">Pass</span>' : '<input type="checkbox" class="blending-check" style="transform: scale(1.5); margin: 20px;" data-item="${item.name}"data-batch="${item.lotserial}" data-qty="${item.qty_label}">') : ''}
                             </td>
                         </tr>
                     `);
@@ -184,49 +189,65 @@ function render_items(item_request_name) {
     });
 }   
 
+function get_status_badge(status) {
+    if (status) {
+        return '<span class="badge badge-success">Selesai</span>';
+    } else if (item.is_picking) {
+        return '<span class="badge badge-info">Sedang Pick</span>';
+    } else {
+        return '<span class="badge badge-warning">Belum</span>';
+    }
+}
 
 // 4. Submit Data secara Background
 window.submit_weighing = function() {
     let checked_items = [];
     let all_checked = true;
 
-    $('.item-check').each(function() {
+    if ($('.weighing-check').length === 0) {
+        frappe.msgprint("Tidak ada item yang bisa ditimbang!");
+        return;
+    }
+
+    $('.weighing-check').each(function() {
+        //alert($(this).data('item') + " - " + $(this).data('batch') + " - " + $(this).data('qty') + " - Checked: " + $(this).is(':checked'));
         if (!$(this).is(':checked')) {
             all_checked = false;
         }
-        checked_items.append({
+        checked_items.push({ 
             item_code: $(this).data('item'),
             batch_no: $(this).data('batch'),
             qty: $(this).data('qty')
         });
     });
-
+   
     if (!all_checked) {
         frappe.msgprint("Semua item harus ditimbang sebelum disimpan!");
         return;
     }
-
+    else {
     // Buat dokumen Konfirmasi Timbang via API
-    frappe.call({
-        method: 'frappe.client.insert',
-        args: {
-            doc: {
-                doctype: 'Konfirmasi Timbang',
-                work_order_split: window.selected_wo,
-                status: 'Completed',
-                items: checked_items.map(i => ({
-                    item_code: i.item_code,
-                    batch_no: i.batch_no,
-                    qty_handover: i.qty,
-                    sudah_ditimbang: 1
-                }))
+        frappe.call({
+            method: 'frappe.client.insert',
+            args: {
+                doc: {
+                    doctype: 'Konfirmasi Timbang',
+                    work_order_split: window.selected_wo,
+                    status: 'Completed',
+                    items: checked_items.map(i => ({
+                        item_code: i.item_code,
+                        batch_no: i.batch_no,
+                        qty_handover: i.qty,
+                        sudah_ditimbang: 1
+                    }))
+                }
+            },
+            callback: function() {
+                frappe.show_alert({message: __('Timbang Berhasil Disimpan'), indicator: 'green'});
+                load_work_orders(); // Kembali ke list
             }
-        },
-        callback: function() {
-            frappe.show_alert({message: __('Timbang Berhasil Disimpan'), indicator: 'green'});
-            load_work_orders(); // Kembali ke list
-        }
-    });
+        });
+    }
 };
 
 window.back_to_list = function() {

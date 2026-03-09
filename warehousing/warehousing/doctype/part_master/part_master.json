@@ -8,12 +8,20 @@
  "field_order": [
   "part_section",
   "part",
+  "image",
   "um",
   "description",
   "column_break_mpih",
+  "drawing_location",
   "expire_date_required",
   "automatic_create_lotserial",
-  "qty_per_pallet"
+  "column_break_nxpp",
+  "qty_per_pallet",
+  "category",
+  "conversion_tab",
+  "um_conversion_factor",
+  "others_file_tab",
+  "file"
  ],
  "fields": [
   {
@@ -35,14 +43,18 @@
    "label": "Description"
   },
   {
+   "description": "smallest unit",
    "fieldname": "um",
-   "fieldtype": "Data",
-   "label": "UM"
+   "fieldtype": "Link",
+   "label": "Origin UM",
+   "options": "Unit Of Masure",
+   "reqd": 1
   },
   {
    "fieldname": "qty_per_pallet",
    "fieldtype": "Int",
-   "label": "Qty Per Pallet"
+   "label": "Qty Per Pallet",
+   "reqd": 1
   },
   {
    "default": "0",
@@ -59,12 +71,53 @@
    "fieldname": "automatic_create_lotserial",
    "fieldtype": "Check",
    "label": "Automatic create lot/serial"
+  },
+  {
+   "fieldname": "drawing_location",
+   "fieldtype": "Link",
+   "label": "Drawing Location",
+   "options": "Drawing Location"
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Select",
+   "label": "Category",
+   "options": "Ingredient\nPackaging"
+  },
+  {
+   "fieldname": "conversion_tab",
+   "fieldtype": "Tab Break",
+   "label": "Conversion"
+  },
+  {
+   "fieldname": "column_break_nxpp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "um_conversion_factor",
+   "fieldtype": "Table",
+   "options": "Um Conversion Factor"
+  },
+  {
+   "fieldname": "image",
+   "fieldtype": "Attach Image",
+   "label": "Image"
+  },
+  {
+   "fieldname": "others_file_tab",
+   "fieldtype": "Tab Break",
+   "label": "Others File"
+  },
+  {
+   "fieldname": "file",
+   "fieldtype": "Attach",
+   "label": "File"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-05 18:42:53.657901",
+ "modified": "2026-03-08 17:08:48.621695",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Part Master",

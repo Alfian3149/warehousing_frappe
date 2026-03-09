@@ -11,6 +11,7 @@
   "warehouse_task_link",
   "executor",
   "execution_time",
+  "verified",
   "transferred",
   "has_background_job",
   "column_break_dwtr",
@@ -37,7 +38,19 @@
   "has_handovered",
   "column_break_lzby",
   "user_handovered",
-  "time_handovered"
+  "time_handovered",
+  "section_break_mezp",
+  "qty_weighing",
+  "has_weighinged",
+  "column_break_vwnm",
+  "user_weighinged",
+  "time_weighinged",
+  "this_section_is_for_blending_process_only_if_any_section",
+  "qty_blending",
+  "has_blendinged",
+  "column_break_gikq",
+  "user_blendinged",
+  "time_blendinged"
  ],
  "fields": [
   {
@@ -109,7 +122,7 @@
    "fetch_from": "material_label_link.qty",
    "fieldname": "qty_label",
    "fieldtype": "Float",
-   "label": "Qty Label"
+   "label": "Qty"
   },
   {
    "fieldname": "remark",
@@ -219,13 +232,81 @@
    "fieldname": "item_details_section",
    "fieldtype": "Section Break",
    "label": "Item Details"
+  },
+  {
+   "fieldname": "section_break_mezp",
+   "fieldtype": "Section Break",
+   "label": "This Section is for Weighing process only if any"
+  },
+  {
+   "fieldname": "qty_weighing",
+   "fieldtype": "Float",
+   "label": "Qty Weighing"
+  },
+  {
+   "default": "0",
+   "fieldname": "has_weighinged",
+   "fieldtype": "Check",
+   "label": "Has Weighinged"
+  },
+  {
+   "fieldname": "column_break_vwnm",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "user_weighinged",
+   "fieldtype": "Link",
+   "label": "User weighinged",
+   "options": "User"
+  },
+  {
+   "fieldname": "time_weighinged",
+   "fieldtype": "Datetime",
+   "label": "Time weighinged"
+  },
+  {
+   "fieldname": "this_section_is_for_blending_process_only_if_any_section",
+   "fieldtype": "Section Break",
+   "label": "This Section is for Blending process only if any"
+  },
+  {
+   "fieldname": "qty_blending",
+   "fieldtype": "Float",
+   "label": "Qty Blending"
+  },
+  {
+   "default": "0",
+   "fieldname": "has_blendinged",
+   "fieldtype": "Check",
+   "label": "Has Blendinged"
+  },
+  {
+   "fieldname": "column_break_gikq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "user_blendinged",
+   "fieldtype": "Link",
+   "label": "User Blendinged",
+   "options": "User"
+  },
+  {
+   "fieldname": "time_blendinged",
+   "fieldtype": "Datetime",
+   "label": "Time Blendinged"
+  },
+  {
+   "default": "0",
+   "fieldname": "verified",
+   "fieldtype": "Check",
+   "label": "Verified"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-02-23 17:20:03.589731",
+ "modified": "2026-03-05 07:49:18.412599",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Warehouse Task Detail",

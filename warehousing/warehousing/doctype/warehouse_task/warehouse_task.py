@@ -11,25 +11,17 @@ import copy
 from frappe.utils import flt
 import time
 from frappe.desk.doctype.notification_log.notification_log import enqueue_create_notification
-
-@frappe.whitelist()
-def notify(owner) : 
-    enqueue_create_notification(owner, {
-    "subject": f"Dokumen {owner} telah disubmit",
-    "document_type": "Warehouse Task",
-    "document_name": "WHTASK-VER-2026-00010",
-    "from_user": owner,
-    "type": "Alert" })
-
-    frappe.msgprint("TEST")
-    return
-
+from warehousing.warehousing.doctype.inventory.inventory import update_inventory_qty
+from warehousing.warehousing.doctype.stock_ledger.stock_ledger import make_sl_entry
+from warehousing.warehousing.utils.connection import test_internal_api
 class WarehouseTask(Document):
     def on_submit(self):
-        if self.task_type == "Putaway Transfer" :
+        if self.task_type == "Picking" : 
             frappe.db.delete("Reserved Task Entry", filters={'task': self.name})
 
-            frappe.enqueue(
+        if self.task_type == "Putaway Transfer" : 
+            frappe.db.delete("Reserved Task Entry", filters={'task': self.name})
+            """ frappe.enqueue(
             "warehousing.warehousing.api_transfer.transfer_submit_to_qad",
             doc_name=self.name,
             queue="long",       # Opsi: 'short', 'default', atau 'long'
@@ -37,7 +29,7 @@ class WarehouseTask(Document):
             is_async=True,
             enqueue_after_commit=True # Menjamin job jalan SETELAH transaksi DB selesai
             )
-            #transfer = frappe.call("warehousing.warehousing.api_transfer.transfer_submit_to_qad", doc_name=self.name)
+            #transfer = frappe.call("warehousing.warehousing.api_transfer.transfer_submit_to_qad", doc_name=self.name) """
 
         """ frappe.publish_realtime('desktop_notification', {
             'title': 'Warehouse Alert',
@@ -54,7 +46,8 @@ class WarehouseTask(Document):
             "from_user": self.owner,
             "type": "Alert"
         }) """
-    def after_insert(self):
+    
+    """ def after_insert(self):
         if self.task_type == "Picking":
             default_site = frappe.db.get_single_value("Material Incoming Control", "default_site")
             item_request_doc = self.reference_name
@@ -89,7 +82,7 @@ class WarehouseTask(Document):
                     prev_qty_picked = flt(request.quantity_picked)
                     request.quantity_picked = prev_qty_picked + grouped_summary[request.part]
 
-            item_request.save() 
+            item_request.save()  """
             
     def autoname(self):
         # 1. Tentukan mapping kode berdasarkan task_type
@@ -113,6 +106,11 @@ class WarehouseTask(Document):
 
     def before_save(self): 
         if self.task_type == "Putaway Transfer" or self.task_type == "Picking" :
+            url = "http://127.0.0.1:24079/wsa/smiiwsa"
+            data = test_internal_api(url)
+            if data.get("status") == "failed" :
+                frappe.throw(data.get("message"))
+                
             for row in self.get("warehouse_task_detail"): 
                 if row.status == "Completed" and flt(row.qty_confirmation) > 0 and row.transferred == False  :
                     row.update_transferred()  
@@ -151,6 +149,19 @@ class WarehouseTask(Document):
                         "Hanya System Manager yang dapat mengubah dokumen ini."),
                         frappe.ValidationError
                     )
+
+@frappe.whitelist()
+def notify(owner) : 
+    enqueue_create_notification(owner, {
+    "subject": f"Dokumen {owner} telah disubmit",
+    "document_type": "Warehouse Task",
+    "document_name": "WHTASK-VER-2026-00010",
+    "from_user": owner,
+    "type": "Alert" })
+
+    frappe.msgprint("TEST")
+    return
+
 @frappe.whitelist()
 def create_physical_verification_task(source_doc, task_type, assigned_to_person=None, assigned_to_role=None):
     new_task = frappe.new_doc("Warehouse Task")
@@ -189,6 +200,8 @@ def create_physical_verification_task(source_doc, task_type, assigned_to_person=
             "qty_per_pallet": Material_Incoming_Item.qty_per_pallet,
             "amt_pallet":Material_Incoming_Item.total_label ,
             "um": Material_Incoming_Item.um,
+            "um_packaging": item.um_packaging,
+            "conversion_factor": item.conversion_factor,
         })
      
     new_task.insert() # Simpan ke database
@@ -203,7 +216,6 @@ def create_physical_verification_task(source_doc, task_type, assigned_to_person=
          "name": new_task.name,
          "message": "Warehouse Task created successfully."
     } # Kembalikan ID task untuk dibuka di UI
-
 
 @frappe.whitelist()
 def create_putaway_transfer_task(source_doc, task_type, assigned_to_person=None, assigned_to_role=None):
@@ -244,29 +256,29 @@ def create_putaway_transfer_task(source_doc, task_type, assigned_to_person=None,
     for task_detail in sorted_task_details:
         item_code = task_detail.item
 
+        target_location = None
         if item_location_map.get(item_code):
             current_suggestion = item_location_map[item_code][0]
             target_location = current_suggestion['location']
-
             current_suggestion['amt_pallet_covered'] -= 1
 
             if current_suggestion['amt_pallet_covered'] <= 0:
                 item_location_map[item_code].pop(0)
 
             print(f"Assigning item {item_code} and lotserial {task_detail.lotserial} to location {target_location}. Remaining pallet for this location: {current_suggestion['amt_pallet_covered']}")
-            new_task.append("warehouse_task_detail", {
-                "warehouse_task_link": source_doc,
-                "line_po": task_detail.line_po,
-                "item": task_detail.item, 
-                "description": task_detail.description,
-                "lotserial": task_detail.lotserial,
-                "um": frappe.db.get_value("Part Master", item_code, "um"),
-                "qty_label": task_detail.qty_confirmation,
-                "expired_date": task_detail.expired_date,
-                "status": "Pending",
-                "locationsource": task_detail.locationdestination,
-                "locationsuggestion":target_location,
-            })
+        new_task.append("warehouse_task_detail", {
+            "warehouse_task_link": source_doc,
+            "line_po": task_detail.line_po,
+            "item": task_detail.item, 
+            "description": task_detail.description,
+            "lotserial": task_detail.lotserial,
+            "um": frappe.db.get_value("Part Master", item_code, "um"),
+            "qty_label": task_detail.qty_confirmation,
+            "expired_date": task_detail.expired_date,
+            "status": "Pending",
+            "locationsource": task_detail.locationdestination,
+            "locationsuggestion":target_location,
+        })
  
     new_task.insert()
     for key, data in item_location_map_copy.items():
@@ -413,7 +425,7 @@ def get_outstanding_physical_verification_tasks(user):
         order = frappe.get_doc("Material Incoming",data.reference_name)
         task_items = frappe.get_all("Warehouse Task Detail",
                 filters={"parent": data.name},
-                fields=["name as keyId","item as sku", "um","description as name", "lotserial as lotSerial", "qty_label as expectedQty","qty_confirmation as receivedQty", "locationsource as fromLocation","locationdestination as toLocation","verified", "discrepancy_reason as discrepancyReason"])
+                fields=["name as keyId","item as sku", "um","description as name", "lotserial as lotSerial", "qty_label as expectedQty","qty_confirmation as receivedQty", "locationsource as fromLocation","locationdestination as toLocation","verified", "discrepancy_reason as discrepancyReason"],order_by='item asc, lotserial asc')
 
         order_tasks.append({
             "keyId": order.name,
@@ -481,20 +493,111 @@ def putaway_transfer_confirm():
         latest_doc_parent.submit()
     return data
 
+
+@frappe.whitelist()
+def picked_confirm():
+    time.sleep(1)
+    #data = frappe.dumps(data)
+    data = frappe.request.get_json()
+    if not data:
+        frappe.throw("Data tidak ditemukan dalam request")
+    
+    doc_child = frappe.get_doc("Warehouse Task Detail", data["keyId"])
+    doc_child.reload()
+    doc_child.set("qty_confirmation", data["pickedQty"])
+    doc_child.set("locationdestination", data["destinationRack"])
+    #doc_child.set("discrepancy_reason", data["discrepancyReason"] if data["discrepancyReason"] else None)
+    doc_child.set("executor", frappe.session.user)
+    doc_child.set("execution_time", frappe.utils.now())
+    doc_child.set("status", "Completed")
+    doc_child.save(ignore_permissions=True)
+
+    doc_parent = frappe.get_doc("Warehouse Task", doc_child.parent)
+    doc_parent.set("users_picker", frappe.session.user)
+    doc_parent.save(ignore_permissions=True)
+    frappe.db.commit()
+    latest_doc_parent = frappe.get_doc("Warehouse Task", doc_child.parent)
+    if latest_doc_parent.status == "Completed" :
+        latest_doc_parent.submit()
+    return data
+
 @frappe.whitelist()
 def scan_item_putaway(item, lotserial):
     task = frappe.get_all("Warehouse Task Detail", 
     filters={
-        "item": item,                 # Filter kolom Child Table
-        "lotserial": lotserial,                 # Filter kolom Child Table
-        "status": "Pending",
-        "parent": ["in", frappe.get_all("Warehouse Task", 
-            filters={"task_type": "Putaway Transfer"}, 
-            pluck="name"
-        )]
-    },
-    fields=["name as keyId", "item as sku", "description as name", "um", "lotserial as lotSerial",  "locationsource as currentLocation", "locationsuggestion as suggestLocation", "qty_label as availableQuantity", "locationdestination as confirmLocation","qty_confirmation as confirmQty"]
-    )
-    data_stok = {}
-    data_stok[item + "#" + lotserial] = task[0] 
-    return data_stok
+            "item": item,                 # Filter kolom Child Table
+            "lotserial": lotserial,                 # Filter kolom Child Table
+            "status": "Pending",
+            "parent": ["in", frappe.get_all("Warehouse Task", 
+                filters={"task_type": "Putaway Transfer"}, 
+                pluck="name")]
+            },
+    fields=["name as keyId", "item as sku", "description as name", "um", "lotserial as lotSerial",  "locationsource as currentLocation", "locationsuggestion as suggestLocation", "qty_label as availableQuantity", "locationdestination as confirmLocation","qty_confirmation as confirmQty"])
+    if task:
+        data_stok = {}
+        data_stok[item + "#" + lotserial] = task[0] 
+        return data_stok
+    else:
+        return {'result':'failed'}
+ 
+def po_receipt_task_confirmation_in_web(transactionSuccess, parent_doc_name):
+    for d in transactionSuccess:
+        d_site = d.get("site") or "1000"
+        d_poline = d.get("poline"),
+        data = {
+			"doctype":"Warehouse Task",
+			"doctype_link":parent_doc_name,
+			"transType":"RCT-PO",
+			"site":d_site,
+			"part":d.get("part"),
+			"lotSerial":d.get("lotserial"),
+			"location":d.get("location"),
+			"invStatus":d.get("ldstatus"),
+			"qtyChg":d.get("qty"),
+			"postingDate":d.get("effdate"),
+			"invExpire": d.get("expire"),
+			"poNumber":d.get("ponumber"),
+			"poLine":d.get("poline", "0")
+		}
+        init_sl = make_sl_entry(**data)
+        init_sl.create_new()
+    frappe.db.commit()
+    """ update_inventory_qty(
+        "Warehouse Task", parent_doc_name, "RCT-PO", d.get("effdate"), 
+        d_site, d.get("part"), d.get("lotserial"), d.get("ref"), 
+        d.get("location"), d.get("qty"), d.get("ldstatus"), 
+        d.get("expire"), d.get("ponumber"), int(d.get("poline", 0))
+    ) """
+
+@frappe.whitelist() 
+def get_picklist_outstanding_tasks(user):
+    user_roles = frappe.get_roles(user)
+    tasks = frappe.get_all("Warehouse Task", 
+    filters=[
+        ["task_type", "=", "Picking"],
+        ["status", "!=", "Completed"],
+        #["or", 
+        #    ["assign_to_user", "=", user],
+        #    ["assign_to_role", "in", user_roles]
+        #]
+    ],
+    fields=["name", "reference_name", "date_instruction", "time_instruction", "assign_to_role"],)
+
+    picklistTask = []
+    items = []
+    for data in tasks:
+        task_items = frappe.get_all("Warehouse Task Detail",
+                filters={"parent": data.name, "status": ["!=", "Completed"]},
+                fields=["name as keyId","item as sku", "um","description as name", "lotserial as lotSerial", "qty_label as quantity","qty_confirmation as receivedQty", "locationsource as sourceLocation","locationdestination as toLocation"],order_by='item asc, lotserial asc')
+
+        picklist = frappe.db.get_value("Item Picklist", data.reference_name, ["priority", "needed_date"], as_dict=True) 
+        picklistTask.append({
+            "orderId": data.reference_name,
+            "productionLine": data.reference_name,
+            "priority": picklist.priority,
+            "neededDate": picklist.needed_date,
+            "destination" : '',
+            "status": data.status,
+            "items": task_items
+        })
+    return picklistTask

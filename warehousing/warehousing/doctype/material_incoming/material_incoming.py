@@ -8,6 +8,7 @@ from frappe.utils import getdate, nowdate
 from frappe.model.mapper import get_mapped_doc
 from frappe import _
 from frappe.utils import flt
+from warehousing.warehousing.utils.item_validator import ItemValidator
 class MaterialIncoming(Document):
 	def before_insert(self):
 		self.status = "Draft"
@@ -16,9 +17,18 @@ class MaterialIncoming(Document):
 		frappe.db.delete("Material Label", {"material_incoming_link": self.name})
 
 	def validate(self):
-		self.ensure_item_details_exist_in_master()
-		
-		self.expire_date_check()
+		for item in self.material_incoming_item:
+			if item.qty_to_receive <=0 : 
+				continue
+				
+			validator = ItemValidator(item.item_number)
+			validator.is_exist()
+			validator.item_not_active()
+			validator.putaway_method_not_setup_yet()
+			if (validator.expire_date_required() and not item.expired_date):
+				frappe.throw(_("Expired date must be filled for item " + item.item_number), frappe.ValidationError)
+		#self.ensure_item_details_exist_in_master()
+		#self.expire_date_check()
 
 		if self.doc_status == 1 and self.status == "Submitted":
 			self.assign_conversion_factor()
@@ -51,14 +61,19 @@ class MaterialIncoming(Document):
 								'custom_purchase_order': self.purchase_order,
 								'line': d.pod_line,
 								'item': d.item_number,
-								'custom_description': d.item_description,
+								'um': d.um,
+								'um_packaging': d.um_conversion,
+								'conversion_factor': d.conversion_factor,
+								'expire': d.expired_date,
+								'description': d.item_description,
 								'lotserial': f"{day}{month}{year}-{lotserial_running_number}",
 								'qty': current_qty,
+								'qty_per_pallet': qty_per_pallet,
 								'barcode_fwrj': d.item_number + '#' + f"{day}{month}{year}-{lotserial_running_number}",
 							}).insert(ignore_permissions=True)
 
 							remaining_qty -= current_qty
-						frappe.db.commit()
+						#frappe.db.commit()
 			frappe.msgprint(
 				msg="Submitted successfully",
 				alert=True,
@@ -69,7 +84,7 @@ class MaterialIncoming(Document):
 
 			if not frappe.db.exists("Part Master", row.item_number):
 				self.create_new_item(row)		
-	
+	 
 	def create_new_item(self, row):
 		new_item = frappe.get_doc({
 			"doctype": "Part Master",
@@ -92,15 +107,6 @@ class MaterialIncoming(Document):
 				else:
 					frappe.throw("Default unit of measure conversion must be defined in Um Conversion Factor for item " + row.item_number, frappe.ValidationError)
 
-	def expire_date_check(self):
-		line_item = self.material_incoming_item
-		if line_item:
-			for item in line_item:
-				expire_required = frappe.db.get_value("Part Master", item.item_number, "expire_date_required")
-				if expire_required and not item.expired_date:
-					frappe.throw(_("Expired date must be filled for item " + item.item_number), frappe.ValidationError)
-					return
-
 	def validate_qty_to_receive(self):
 		line_item = self.material_incoming_item
 		for d in line_item:
@@ -113,7 +119,8 @@ def max_qty_receive_allowed(order_number, order_line, name):
 	parent_names = frappe.get_all("Material Incoming", 
 		filters={
 			"purchase_order": order_number,
-			"name": ["!=", name]
+			"name": ["!=", name],
+			"status":["!=", "Cancelled"]
 			}, 
 		pluck="name"
 	)

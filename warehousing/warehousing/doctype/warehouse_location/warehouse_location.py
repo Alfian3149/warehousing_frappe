@@ -13,6 +13,9 @@ class WarehouseLocation(NestedSet):
 
 class WarehouseLocation(Document):
 	def validate(self):
+		if len(self.name) > 8:
+			frappe.throw("Warehouse Location name cannot exceed 8 characters.")
+
 		val = self.total_capacity
 		self.name = self.name.upper() 
 		# Update massal

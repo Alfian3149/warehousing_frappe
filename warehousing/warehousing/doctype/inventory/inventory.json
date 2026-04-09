@@ -16,10 +16,14 @@
   "column_break_mnqd",
   "qty_on_hand",
   "qty_reserverd",
+  "um",
+  "qty_per_pallet",
   "column_break_avig",
   "warehouse_location",
   "inventory_status",
-  "expire_date"
+  "expire_date",
+  "um_packaging",
+  "conversion_factor"
  ],
  "fields": [
   {
@@ -55,15 +59,16 @@
   },
   {
    "fieldname": "warehouse_location",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "label": "Location",
-   "options": "Warehouse Location"
+   "search_index": 1
   },
   {
    "default": "1000",
    "fieldname": "site",
    "fieldtype": "Data",
-   "label": "Site"
+   "label": "Site",
+   "search_index": 1
   },
   {
    "fieldname": "section_break_vjkc",
@@ -92,13 +97,34 @@
    "fieldname": "qty_reserverd",
    "fieldtype": "Float",
    "label": "Qty Reserved"
+  },
+  {
+   "fieldname": "um",
+   "fieldtype": "Data",
+   "label": "UM"
+  },
+  {
+   "fieldname": "um_packaging",
+   "fieldtype": "Data",
+   "label": "UM Packaging"
+  },
+  {
+   "fieldname": "conversion_factor",
+   "fieldtype": "Float",
+   "label": "Conversion Factor"
+  },
+  {
+   "fieldname": "qty_per_pallet",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Qty Per Pallet"
   }
  ],
  "grid_page_length": 50,
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-05 16:48:21.971903",
+ "modified": "2026-04-09 10:22:46.065482",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Inventory",

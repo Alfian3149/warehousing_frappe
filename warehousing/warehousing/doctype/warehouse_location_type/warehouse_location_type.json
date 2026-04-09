@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_import": 1,
  "allow_rename": 1,
  "autoname": "field:warehouse_type",
  "creation": "2026-01-15 12:20:13.032945",
@@ -19,7 +20,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-15 12:20:41.079619",
+ "modified": "2026-03-24 03:59:35.456979",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Warehouse Location Type",

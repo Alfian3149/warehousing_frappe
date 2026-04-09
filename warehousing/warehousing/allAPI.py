@@ -4,17 +4,22 @@ import frappe
 from frappe import _
 import time
 from bs4 import BeautifulSoup 
-from warehousing.warehousing.doctype.inventory.inventory import update_inventory_qty
-import xml.etree.ElementTree as ET
-from warehousing.warehousing.utils import test_internal_api
+from frappe.utils import flt
 
+import xml.etree.ElementTree as ET
+from warehousing.warehousing.utils.connection import test_internal_api
+from warehousing.warehousing.utils.wo_validation import WorkOrderValidator
 @frappe.whitelist()
-def get_simulated_picklist_item(site, part, qty, domain):
+def get_simulated_picklist_item(workOrder, site, part, qty, domain):
     import xml.etree.ElementTree as ET
+
     time.sleep(1)
     if not part:
         frappe.throw(_("Part harus diisi"))
         return
+    validator = WorkOrderValidator(workOrder)
+    validator.qty_tobe_produced(qty)
+
     input_data = {
         "ttip_table": [
             {
@@ -66,7 +71,7 @@ def get_simulated_picklist_item(site, part, qty, domain):
 
 
 @frappe.whitelist()
-def get_workorder_from_qad(work_order, domain): 
+def get_workorder_from_qad(work_order, domain, is_packaging=False, work_order_comp_issued_name=None): 
     time.sleep(1)
     if not work_order:
         frappe.throw(_("Work Order harus diisi"))
@@ -76,7 +81,8 @@ def get_workorder_from_qad(work_order, domain):
             "ttWORequest": [
                 {
                     "domain_filter": domain,
-                    "wonbr_filter": work_order
+                    "wonbr_filter": work_order,
+                    "is_packaging": is_packaging
                 }
             ]
         }
@@ -103,6 +109,9 @@ def get_workorder_from_qad(work_order, domain):
 
         if response.status_code == 200:
             dataResponse = parse_qad_response(response.text)
+            if is_packaging:
+                data_converted = convert_wo_api_result(dataResponse, work_order_comp_issued_name)
+                return data_converted
             return dataResponse
         else:
             frappe.throw(_("Koneksi ke QAD Gagal: {0}").format(response.status_code))
@@ -112,6 +121,101 @@ def get_workorder_from_qad(work_order, domain):
         frappe.throw(_("Terjadi kesalahan saat menghubungi QAD: {0}").format(str(e)))
 
 
+
+def convert_wo_api_result(dataResponse, work_order_comp_issued_name):
+    womstr = dataResponse['dsWOResponse']['womstr']
+    tt_fg_rct = dataResponse['dsWOResponse']['tt_fg_rct'] if 'tt_fg_rct' in dataResponse['dsWOResponse'] else []
+    woddet_baru = []
+    tt_fg_rct_baru = []
+    total_received = 0
+    existing_lots = []
+    simulated_picklist = None
+    for item in dataResponse['dsWOResponse']['woddet']:
+        item_group = ""
+        count_packaging = 0
+        count_ingredient = 0
+        count_packaging = frappe.db.count(
+            "Product Line Allowed", 
+            filters={
+                "parent": "Work Order Activity Control", # Ganti dengan nama Single DocType Anda
+                "parenttype": "Work Order Activity Control", 
+                "product_line": item['wodprod_line'],
+                "part_group": "PACKAGING"
+            }
+        )
+        if count_packaging > 0:
+            item_group = "PACKAGING"
+        else:
+            count_ingredient = frappe.db.count(
+            "Product Line Allowed", 
+                filters={
+                    "parent": "Work Order Activity Control", # Ganti dengan nama Single DocType Anda
+                    "parenttype": "Work Order Activity Control", 
+                    "product_line": item['wodprod_line'],
+                    "part_group": "INGREDIENT"
+                }
+            )
+            if count_ingredient > 0 :
+                item_group = "INGREDIENT"
+    
+        woddet_baru.append({
+                "wodnbr": item['wodnbr'],
+                "wodlot": item['wodlot'],
+                "wodop": item['wodop'],
+                "wodpart": item['wodpart'],
+                "wodpart_um": item['wodpart_um'],
+                "wodpart_desc": item['wodpart_desc'],
+                "wodpart_qtyperpallet": item['wodpart_qtyperpallet'],
+                "wodpart_netwt": item['wodpart_netwt'],
+                "wodprod_line": item['wodprod_line'],
+                "woddoc_id": item['woddoc_id'],
+                "wodqty_pick": item['wodqty_pick'],
+                "wodqty_iss": item['wodqty_iss'],
+                "wodqty_chg": item['wodqty_chg'],
+                "wodqty_all": item['wodqty_all'],
+                "wodqty_req": item['wodqty_req'],
+                "wodsod_line": item['wodsod_line'],
+                "wodsod_nbr": item['wodsod_nbr'],
+                "wodstatus": item['wodstatus'],
+                "wodproject": item['wodproject'],
+                "item_group": item_group,
+        })
+
+    if len(tt_fg_rct) > 0:
+        print(f"Length of tt_fg_rct: {len(tt_fg_rct)}")
+        data = frappe.db.get_list("Work Order Comp Issued", filters={
+            "name": ["!=", work_order_comp_issued_name], 
+            "docstatus": ["!=", 2],
+            "work_order_number": womstr[0]["wonbr"]
+            }, 
+            fields=["wo_api"]
+            )
+
+        print(f"data: {data}")
+        data_nested = []
+        for d in data:
+            data_nested.append(d["tt_fg_rct"])
+
+        print(f"data_nested: {data_nested}")
+        if data_nested and len(data_nested) > 0:
+            existing_lots = [item.get('tt_lot') for sublist in data_nested for item in sublist]
+
+        for item in tt_fg_rct:
+            if item['tt_lot'] not in existing_lots:
+                tt_fg_rct_baru.append(item)
+                total_received += flt(item['tt_qty_rct'])
+
+        if total_received > 0:
+            simulated_picklist = get_simulated_picklist_item(womstr[0]["wonbr"], womstr[0]["wosite"], womstr[0]["wopart"], total_received, "SMII")
+
+    return {"dsWOResponse": {
+        "womstr":womstr,
+        "woddet":woddet_baru,
+        "tt_fg_rct":tt_fg_rct_baru if tt_fg_rct_baru else [], 
+        "simulated_picklist":simulated_picklist["ttdet_table"] if simulated_picklist else [], 
+        "total_received": total_received
+        }
+    }
 @frappe.whitelist()
 def get_po_from_qad(po_number=None, domain="SMII"): 
     time.sleep(1)
@@ -310,16 +414,20 @@ def po_receipt_confirmation(parent_doc_name, material_incoming_name):
                 isNotOk = str(data_dict.get("opnotok", "false")).lower()
                 
                 if isNotOk == "false":
+                    frappe.enqueue(
+                        "warehousing.warehousing.doctype.warehouse_task.warehouse_task.po_receipt_task_confirmation_in_web",
+                        queue="default",
+                        timeout=600,
+                        is_async=True,
+                        enqueue_after_commit=False,
+                        transactionSuccess=transactionSuccess,
+                        parent_doc_name=parent_doc_name,
+                    )   
+
                     for d in transactionSuccess:
                         receiver = d.get("receiver")
-                        d_site = d.get("site") or "1000"
-                        # Fungsi update_inventory_qty pastikan sudah terimport
-                        update_inventory_qty(
-                            "Warehouse Task", parent_doc_name, "RCT-PO", d.get("effdate"), 
-                            d_site, d.get("part"), d.get("lotserial"), d.get("ref"), 
-                            d.get("location"), d.get("qty"), d.get("ldstatus"), 
-                            d.get("expire"), d.get("ponumber"), int(d.get("poline", 0))
-                        )
+                        break
+
                     int_log.status = "Completed"
 
             # Logika Jika Error dari QAD

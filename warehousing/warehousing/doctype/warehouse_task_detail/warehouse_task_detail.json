@@ -20,6 +20,8 @@
   "um",
   "description",
   "lotserial",
+  "um_packaging",
+  "conversion_factor",
   "column_break_mqaj",
   "discrepancy_reason",
   "remark",
@@ -202,11 +204,13 @@
    "label": "This Section is for Handover process only if any"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "qty_handover",
    "fieldtype": "Float",
    "label": "Qty Handover"
   },
   {
+   "allow_on_submit": 1,
    "default": "0",
    "fieldname": "has_handovered",
    "fieldtype": "Check",
@@ -218,12 +222,14 @@
    "fieldtype": "Column Break"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "user_handovered",
    "fieldtype": "Link",
    "label": "User Handovered",
    "options": "User"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "time_handovered",
    "fieldtype": "Datetime",
    "label": "Time Handovered"
@@ -300,13 +306,23 @@
    "fieldname": "verified",
    "fieldtype": "Check",
    "label": "Verified"
+  },
+  {
+   "fieldname": "um_packaging",
+   "fieldtype": "Data",
+   "label": "UM Packaging"
+  },
+  {
+   "fieldname": "conversion_factor",
+   "fieldtype": "Float",
+   "label": "Conversion Factor"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-03-05 07:49:18.412599",
+ "modified": "2026-03-31 07:05:04.082419",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Warehouse Task Detail",

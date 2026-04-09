@@ -140,10 +140,12 @@ export function MaterialIncoming({ onBack }: MaterialIncomingProps) {
       // Store lot/serial number with the item
       const updatedOrder = { ...order };
 
+      
       if (updatedOrder.items[itemIndex].verified === true){
         setError('This label already scanned!');
       }
       else {
+        setQuantity(updatedOrder.items[itemIndex].expectedQty);
         updatedOrder.items[itemIndex].lotSerial = lotSerial;
         setOrder(updatedOrder);
         setCurrentItemIndex(itemIndex);

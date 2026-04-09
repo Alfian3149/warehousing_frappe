@@ -6,18 +6,26 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "section_break_wmzx",
+  "naming_series",
+  "column_break_qghv",
+  "for_material_packaging__blending",
+  "column_break_afrn",
+  "work_order_split_number",
+  "work_order_number",
   "section_break_whir",
   "amended_from",
-  "naming_series",
-  "work_order_number",
+  "site",
+  "order_date",
   "column_break_brvy",
-  "work_order_split_number",
-  "status",
+  "id",
+  "work_order_status",
   "column_break_uhig",
   "finish_good",
-  "small_text_pglg",
+  "fg_description",
+  "um",
   "section_break_ohjt",
-  "quantity",
+  "qty_product_completed_to_be_issued",
   "column_break_vmkw",
   "quantity_ordered",
   "column_break_tlyb",
@@ -25,10 +33,14 @@
   "column_break_hikb",
   "quantity_rejected",
   "work_order_detail_section",
+  "wo_api",
   "html_wo_detail",
-  "section_break_wmzx",
-  "for_material_packaging__blending",
+  "all_components_section",
+  "lotserial_has_received",
+  "section_break_plet",
+  "item_summary_to_issued",
   "section_break_cedb",
+  "get_material_stock",
   "item_issued"
  ],
  "fields": [
@@ -50,14 +62,10 @@
   {
    "fieldname": "work_order_split_number",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Work Order Split Number",
-   "options": "Work Order Split"
-  },
-  {
-   "fetch_from": "work_order_split_number.status",
-   "fieldname": "status",
-   "fieldtype": "Data",
-   "label": "Status"
+   "options": "Work Order Split",
+   "search_index": 1
   },
   {
    "fieldname": "column_break_brvy",
@@ -67,38 +75,30 @@
    "fetch_from": "work_order_split_number.finish_good",
    "fieldname": "finish_good",
    "fieldtype": "Data",
-   "label": "Finish Good"
-  },
-  {
-   "fetch_from": "work_order_split_number.fg_description",
-   "fieldname": "small_text_pglg",
-   "fieldtype": "Small Text"
-  },
-  {
-   "fetch_from": "work_order_split_number.quantity_to_be_produced_immediately",
-   "fieldname": "quantity",
-   "fieldtype": "Float",
-   "label": "Quantity To Be Issued"
+   "label": "Finish Good",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_wmzx",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "label": "Data Selection "
   },
   {
    "fieldname": "for_material_packaging__blending",
    "fieldtype": "Select",
    "label": "For Material Packaging / Blending? ",
-   "options": "Packaging\nBlending"
+   "options": "\nPackaging\nBlending",
+   "reqd": 1
   },
   {
-   "fetch_from": "work_order_split_number.work_order",
    "fieldname": "work_order_number",
    "fieldtype": "Data",
-   "label": "Work Order QAD"
+   "label": "Work order "
   },
   {
    "fieldname": "section_break_cedb",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "label": "Material Details to issued"
   },
   {
    "fieldname": "naming_series",
@@ -111,6 +111,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "collapsible": 1,
    "fieldname": "work_order_detail_section",
    "fieldtype": "Section Break",
    "label": "Work Order Detail"
@@ -131,7 +132,8 @@
    "fetch_from": "work_order_split_number.quantity_ordered",
    "fieldname": "quantity_ordered",
    "fieldtype": "Float",
-   "label": "Quantity Ordered"
+   "label": "Quantity Ordered",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_tlyb",
@@ -141,7 +143,8 @@
    "fetch_from": "work_order_split_number.quantity_completed",
    "fieldname": "quantity_completed",
    "fieldtype": "Float",
-   "label": "Quantity Completed"
+   "label": "Quantity Completed",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_hikb",
@@ -151,19 +154,98 @@
    "fetch_from": "work_order_split_number.quantity_rejected",
    "fieldname": "quantity_rejected",
    "fieldtype": "Float",
-   "label": "Quantity Rejected"
+   "label": "Quantity Rejected",
+   "read_only": 1
   },
   {
    "fieldname": "item_issued",
    "fieldtype": "Table",
    "options": "Work Order Comp Issued Items"
+  },
+  {
+   "fieldname": "column_break_qghv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_afrn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "work_order_split_number.id",
+   "fieldname": "id",
+   "fieldtype": "Data",
+   "label": "WO ID QAD",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "work_order_split_number.status",
+   "fieldname": "work_order_status",
+   "fieldtype": "Data",
+   "label": "WO Status"
+  },
+  {
+   "fetch_from": "work_order_split_number.fg_description",
+   "fieldname": "fg_description",
+   "fieldtype": "Small Text",
+   "label": "FG Description ",
+   "read_only": 1
+  },
+  {
+   "fieldname": "site",
+   "fieldtype": "Data",
+   "label": "Site"
+  },
+  {
+   "fieldname": "order_date",
+   "fieldtype": "Date",
+   "label": "Order Date"
+  },
+  {
+   "fieldname": "um",
+   "fieldtype": "Data",
+   "label": "FG UM"
+  },
+  {
+   "fetch_from": "work_order_split_number.quantity_to_be_produced_immediately",
+   "fieldname": "qty_product_completed_to_be_issued",
+   "fieldtype": "Float",
+   "label": "Qty Product Completed To be Issued"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "all_components_section",
+   "fieldtype": "Section Break",
+   "label": "Lot/serial data that has been received"
+  },
+  {
+   "fieldname": "section_break_plet",
+   "fieldtype": "Section Break",
+   "label": "Material Summary To Issued"
+  },
+  {
+   "fieldname": "item_summary_to_issued",
+   "fieldtype": "Table",
+   "options": "Work Order Comp Issued Summary"
+  },
+  {
+   "fieldname": "wo_api",
+   "fieldtype": "JSON"
+  },
+  {
+   "fieldname": "lotserial_has_received",
+   "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "get_material_stock",
+   "fieldtype": "Button",
+   "label": "Get Material Stock"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-26 08:05:20.624572",
+ "modified": "2026-04-09 10:25:25.296239",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Work Order Comp Issued",

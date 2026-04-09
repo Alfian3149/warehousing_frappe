@@ -23,6 +23,7 @@
   "doctype_source",
   "data_link",
   "transaction_type",
+  "inventory_doc_link",
   "section_break_look",
   "actual_qty",
   "column_break_qjvt",
@@ -59,10 +60,9 @@
   },
   {
    "fieldname": "warehouse_location",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Loc",
-   "options": "Warehouse Location"
+   "label": "Loc"
   },
   {
    "fieldname": "actual_qty",
@@ -136,10 +136,9 @@
   },
   {
    "fieldname": "status",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Inv Stts",
-   "options": "Inventory Status"
+   "label": "Inv Stts"
   },
   {
    "fieldname": "expire_date",
@@ -156,13 +155,19 @@
    "fieldname": "po_number",
    "fieldtype": "Data",
    "label": "PO Number"
+  },
+  {
+   "fieldname": "inventory_doc_link",
+   "fieldtype": "Link",
+   "label": "Inventory Doc Link",
+   "options": "Inventory"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-30 09:25:40.131624",
+ "modified": "2026-04-09 10:23:25.459223",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Stock Ledger",

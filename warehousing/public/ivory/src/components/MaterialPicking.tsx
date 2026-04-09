@@ -1,79 +1,245 @@
-import { useState } from 'react';
-import { ArrowLeft, ShoppingCart, MapPin, CheckCircle, Package, ClipboardList } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, ShoppingCart, MapPin, CheckCircle, Package, ClipboardList, TrendingUp, Calendar } from 'lucide-react';
 import { BarcodeScanner } from './BarcodeScanner';
-
+import { postToFrappe } from '../services/frappeService';
 interface MaterialPickingProps {
   onBack: () => void;
+}
+
+interface PickingItem {
+  keyId: string;
+  sku: string;
+  name: string;
+  um: string;
+  lotSerial: string;
+  quantity: number;
+  receivedQty: number;
+  sourceLocation: string;
+  sourceRack: string;
+  toLocation: string;
+}
+
+interface PickedItemDetail {
+  keyId: string;
+  sku: string;
+  name: string;
+  lotSerial: string;
+  pickedQty: number;
+  sourceLocation: string;
+  sourceLevel: string;
+  destinationRack: string;
+  destinationLevel: string;
 }
 
 interface PickingOrder {
   orderId: string;
   productionLine: string;
+  destination: string;
+  status: string;
+  neededDate: Date;
   priority: 'High' | 'Medium' | 'Low';
-  items: Array<{
-    sku: string;
-    name: string;
-    quantity: number;
-    location: string;
-    rack: string;
-    picked: boolean;
-  }>;
+  items: PickingItem[];
 }
 
-const mockPickingOrders: Record<string, PickingOrder> = {
-  'PICK2024001': {
+/* const mockPickingOrders: PickingOrder[] = [
+  {
     orderId: 'PICK2024001',
     productionLine: 'Assembly Line A',
+    neededDate: new Date(),
     priority: 'High',
     items: [
-      { sku: 'SKU12345', name: 'Steel Bolts M8', quantity: 50, location: 'A-1-01', rack: 'RACK001', picked: false },
-      { sku: 'SKU67890', name: 'Washers 10mm', quantity: 100, location: 'A-1-01', rack: 'RACK001', picked: false },
-      { sku: 'SKU11111', name: 'Nuts M8', quantity: 50, location: 'A-1-02', rack: 'RACK002', picked: false },
+      { sku: 'SKU12345', name: 'Steel Bolts M8', quantity: 50, sourceLocation: 'A-1-01', sourceRack: 'RACK001' },
+      { sku: 'SKU67890', name: 'Washers 10mm', quantity: 100, sourceLocation: 'A-1-01', sourceRack: 'RACK001' },
+      { sku: 'SKU11111', name: 'Nuts M8', quantity: 50, sourceLocation: 'A-1-02', sourceRack: 'RACK002' },
     ],
   },
-  'PICK2024002': {
+  {
     orderId: 'PICK2024002',
     productionLine: 'Assembly Line B',
     priority: 'Medium',
     items: [
-      { sku: 'SKU12345', name: 'Steel Bolts M8', quantity: 30, location: 'A-1-01', rack: 'RACK001', picked: false },
+      { sku: 'SKU12345', name: 'Steel Bolts M8', quantity: 30, sourceLocation: 'A-1-01', sourceRack: 'RACK001' },
+      { sku: 'SKU22222', name: 'Screws M6', quantity: 75, sourceLocation: 'B-2-03', sourceRack: 'RACK005' },
     ],
   },
-};
+  {
+    orderId: 'PICK2024003',
+    productionLine: 'Assembly Line C',
+    priority: 'Low',
+    items: [
+      { sku: 'SKU33333', name: 'Anchors 8mm', quantity: 120, sourceLocation: 'C-3-01', sourceRack: 'RACK010' },
+    ],
+  },
+];
+ */
+type ViewState = 'list' | 'picking' | 'qty-input' | 'rack-input' | 'level-input' | 'summary';
 
 export function MaterialPicking({ onBack }: MaterialPickingProps) {
+  const [view, setView] = useState<ViewState>('list');
   const [order, setOrder] = useState<PickingOrder | null>(null);
+  const [mockOrders, setMockOrders] = useState<PickingOrder[]>([]);
+  const [pickedItems, setPickedItems] = useState<PickedItemDetail[]>([]);
+  const [currentItemIndex, setCurrentItemIndex] = useState<number | null>(null);
+  const [currentPick, setCurrentPick] = useState<{
+    qty: string;
+    rack: string;
+    level: string;
+  }>({ qty: '', rack: '', level: '' });
   const [error, setError] = useState('');
 
-  const handleOrderScan = (code: string) => {
-    const orderData = mockPickingOrders[code];
-    if (orderData) {
-      setOrder(orderData);
-      setError('');
-    } else {
-      setOrder(null);
-      setError('Picking order not found');
-    }
+  useEffect(() => {
+
+    const fetchTask = async () => {
+      const getFrappe = () => (window as any).frappe;
+      const user = getFrappe()?.session?.user;
+      const res = await fetch(`/api/method/warehousing.warehousing.doctype.warehouse_task.warehouse_task.get_picklist_outstanding_tasks?user=${user}`);
+      const data = await res.json();
+      
+      setMockOrders(data.message || []);
+      console.log(data.message);
+    };
+    fetchTask();
+  }, []);
+
+  const handleSelectOrder = (selectedOrder: PickingOrder) => {
+    setOrder(selectedOrder);
+    setView('picking');
+    setPickedItems([]);
+    setCurrentItemIndex(null);
+    setError('');
+
+    console.log(pickedItems);
   };
 
   const handleItemScan = (code: string) => {
     if (!order) return;
 
-    const itemIndex = order.items.findIndex(item => item.sku === code && !item.picked);
+    // Parse barcode format: ITEM#LOTSERIAL
+    const parts = code.split('#');
+    if (parts.length !== 2) {
+      setError('Invalid barcode format. Expected: ITEM#LOTSERIAL');
+      return;
+    }
+    
+    const [itemCode, lotSerial] = parts;
+
+  const itemIndex = order.items.findIndex(item =>  item.sku === itemCode && item.lotSerial === lotSerial);
     if (itemIndex !== -1) {
-      const updatedOrder = { ...order };
-      updatedOrder.items[itemIndex].picked = true;
-      setOrder(updatedOrder);
+      // Check if already picked
+      const alreadyPicked = pickedItems.some(p => p.sku === code);
+      if (alreadyPicked) {
+        setError('Item already picked');
+        return;
+      }
+
+      setCurrentItemIndex(itemIndex);
+      setView('qty-input');
       setError('');
     } else {
-      setError('Item not found or already picked');
+      setError('Item not found in picking list');
     }
   };
 
+  const handleQuantitySubmit = () => {
+    if (currentItemIndex === null || !order) return;
+
+    const qty = parseInt(currentPick.qty);
+    if (isNaN(qty) || qty <= 0) {
+      setError('Please enter a valid quantity');
+      return;
+    }
+
+    if (qty > order.items[currentItemIndex].quantity) {
+      setError(`Quantity exceeds required amount (${order.items[currentItemIndex].quantity})`);
+      return;
+    }
+
+    setView('rack-input');
+    setError('');
+  };
+
+  const handleRackSubmit = () => {
+    if (!currentPick.rack.trim()) {
+      setError('Please enter rack position');
+      return;
+    }
+
+    setView('level-input');
+    setError('');
+  };
+
+  const handleLevelSubmit = () => {
+    if (!currentPick.level.trim()) {
+      setError('Please enter rack level');
+      return;
+    }
+
+    setView('summary');
+    setError('');
+  };
+
+  const handleConfirmPick = async () => {
+    if (currentItemIndex === null || !order) return;
+
+    const item = order.items[currentItemIndex];
+    const newPickedItem: PickedItemDetail = {
+      keyId: item.keyId,
+      sku: item.sku,
+      name: item.name,
+      lotSerial: item.lotSerial,
+      sourceLocation: currentPick.rack,
+      sourceLevel: currentPick.level,
+      pickedQty: parseInt(currentPick.qty),
+      destinationRack: item.toLocation,
+      destinationLevel: '', // Assuming destination level is not provided in the current flow
+    };
+
+    try {
+        await postToFrappe('warehousing.warehousing.doctype.warehouse_task.warehouse_task.picked_confirm', newPickedItem);
+        } catch (err) {
+          console.error(err);
+          setError(err);
+      }
+
+    console.log('Confirming pick:', newPickedItem);
+    console.log('Current item:', item);
+    const updatedPickedItems = [...pickedItems, newPickedItem];
+    setPickedItems(updatedPickedItems);
+    
+    // Reset current pick
+    setCurrentPick({ qty: '', rack: '', level: '' });
+    setCurrentItemIndex(null);
+
+    // Check if all items are picked
+    if (updatedPickedItems.length >= order.items.length) {
+      // All items picked, go back to order list
+      setView('list');
+      setOrder(null);
+      setPickedItems([]);
+    } else {
+      // More items to pick, go back to picking list
+      setView('picking');
+    }
+  };
+
+  const handleBackToList = () => {
+    setView('list');
+    setOrder(null);
+    setPickedItems([]);
+    setCurrentItemIndex(null);
+    setCurrentPick({ qty: '', rack: '', level: '' });
+    setError('');
+  };
+
+  const handleCancelInput = () => {
+    setView('picking');
+    setCurrentItemIndex(null);
+    setCurrentPick({ qty: '', rack: '', level: '' });
+    setError('');
+  };
+
   const totalItems = order?.items.length ?? 0;
-  const pickedItems = order?.items.filter(item => item.picked).length ?? 0;
-  const allPicked = totalItems > 0 && pickedItems === totalItems;
-  const progress = totalItems > 0 ? (pickedItems / totalItems) * 100 : 0;
+  const progress = totalItems > 0 ? (pickedItems.length / totalItems) * 100 : 0;
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -88,7 +254,7 @@ export function MaterialPicking({ onBack }: MaterialPickingProps) {
     <div className="min-h-screen bg-gray-50 pb-32">
       <div className="bg-gradient-to-r from-[#1e3a52] to-[#2d5f73] text-white p-4 sticky top-0 shadow-lg z-10">
         <div className="max-w-md mx-auto flex items-center gap-3">
-          <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+          <button onClick={view === 'list' ? onBack : handleBackToList} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
             <ArrowLeft className="w-6 h-6" />
           </button>
           <div className="flex items-center gap-2 flex-1">
@@ -99,126 +265,325 @@ export function MaterialPicking({ onBack }: MaterialPickingProps) {
       </div>
 
       <div className="max-w-md mx-auto p-4 space-y-6">
-        {error && !order && (
-          <div className="bg-red-50 border-l-4 border-red-500 rounded-xl p-4">
-            <div className="text-red-900">{error}</div>
-          </div>
-        )}
+        {view === 'list' ? (
+          <>
+            <div className="bg-blue-50 border-l-4 border-blue-500 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <ClipboardList className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <div className="text-blue-900 font-medium">Select Picking Order</div>
+                  <p className="text-blue-700 text-sm">Choose a pick list to start picking</p>
+                </div>
+              </div>
+            </div>
 
-        {order && (
-          <div className="space-y-4">
+            <div className="space-y-3">
+              {mockOrders.map((po, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleSelectOrder(po)}
+                  className="w-full bg-white rounded-2xl shadow-md p-5 hover:shadow-lg transition-all text-left border-2 border-transparent hover:border-blue-500"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <div className="text-gray-900 font-medium text-lg mb-1">{po.orderId}</div>
+                      <div className="flex items-center gap-2 text-gray-600 mb-2">
+                        <Calendar className="w-4 h-4" />
+                        <span className="text-sm">Need Date : {po.neededDate}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2 items-end">
+                      <div className={`px-3 py-1 rounded-full text-sm font-medium ${getPriorityColor(po.priority)}`}>
+                        {po.priority}
+                      </div>
+                      <div className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                        {po.items.length} item{po.items.length > 1 ? 's' : ''}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-gray-200">
+                    <div className="text-sm text-gray-600">Items:</div>
+                    <div className="mt-2 space-y-1">
+                      {po.items.map((item, itemIndex) => (
+                        <div key={itemIndex} className="text-sm text-gray-700 flex justify-between">
+                          <span>• {item.name}</span>
+                          <span className="text-gray-500">{item.quantity} {item.um}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </>
+        ) : view === 'picking' && order ? (
+          <>
+            {error && (
+              <div className="bg-red-50 border-l-4 border-red-500 rounded-xl p-4">
+                <div className="text-red-900">{error}</div>
+              </div>
+            )}
+            
             <div className="bg-white rounded-2xl shadow-md p-5">
-              <div className="text-gray-900 mb-4">Picking Order Details</div>
+              <div className="text-gray-900 font-medium mb-4">Picking Progress</div>
               
-              <div className="space-y-3">
+              <div className="space-y-3 mb-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Order Number:</span>
-                  <span className="text-gray-900">{order.orderId}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Production Line:</span>
-                  <span className="text-gray-900">{order.productionLine}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Priority:</span>
-                  <span className={`px-3 py-1 rounded-full ${getPriorityColor(order.priority)}`}>
-                    {order.priority}
-                  </span>
+                  <span className="text-gray-600">Number:</span>
+                  <span className="text-gray-900 font-medium">{order.orderId}</span>
                 </div>
               </div>
 
-              <div className="mt-4">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-gray-600">Progress</span>
-                  <span className="text-gray-900">{pickedItems} / {totalItems}</span>
-                </div>
-                <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-orange-600 rounded-full transition-all duration-300"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-600">Progress</span>
+                <span className="text-gray-900 font-medium">{pickedItems.length} / {totalItems}</span>
+              </div>
+              <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-blue-600 rounded-full transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
               </div>
             </div>
 
             <div className="bg-white rounded-2xl shadow-md p-5">
               <div className="flex items-center gap-2 mb-4">
-                <ClipboardList className="w-5 h-5 text-gray-600" />
-                <div className="text-gray-900">Picking List</div>
+                <Package className="w-5 h-5 text-gray-600" />
+                <div className="text-gray-900 font-medium">Picking List</div>
               </div>
               
               <div className="space-y-3">
-                {order.items.map((item, index) => (
-                  <div 
-                    key={index}
-                    className={`p-4 rounded-xl border-2 transition-all ${
-                      item.picked 
-                        ? 'bg-green-50 border-green-200' 
-                        : 'bg-white border-gray-200'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <div className="text-gray-900 mb-1">{item.name}</div>
-                        <p className="text-gray-600">{item.sku}</p>
+                {order.items.map((item, index) => {
+                  const isPicked = pickedItems.some(p => p.sku === item.sku && p.lotSerial === item.lotSerial);
+                  return (
+                    <div 
+                      key={index}
+                      className={`p-4 rounded-xl border-2 transition-all ${
+                        isPicked 
+                          ? 'bg-green-50 border-green-200' 
+                          : 'bg-white border-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <div className="text-gray-900 font-medium mb-1">{item.name}</div>
+                          <p className="text-gray-600 text-sm">Item : {item.sku}</p>
+                          <p className="text-gray-600 text-sm">Lot/Serial : {item.lotSerial}</p>
+                        </div>
+                        {isPicked ? (
+                          <CheckCircle className="w-6 h-6 text-green-600" />
+                        ) : (
+                          <div className="w-6 h-6 border-2 border-gray-300 rounded-full" />
+                        )}
                       </div>
-                      {item.picked ? (
-                        <CheckCircle className="w-6 h-6 text-green-600" />
-                      ) : (
-                        <div className="w-6 h-6 border-2 border-gray-300 rounded-full" />
+                      
+                      <div className="flex items-center gap-4 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Package className="w-4 h-4 text-gray-500" />
+                          <span className="text-gray-600">Qty: {item.quantity}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-gray-500" />
+                          <span className="text-gray-600">{item.sourceRack} ({item.sourceLocation})</span>
+                        </div>
+                      </div>
+
+                      {isPicked && (
+                        <div className="mt-3 pt-3 border-t border-green-300">
+                          <div className="text-sm text-green-700">
+                            Destination: {pickedItems.find(p => p.sku === item.sku && p.lotSerial === item.lotSerial)?.destinationRack} {pickedItems.find(p => p.sku === item.sku && p.lotSerial === item.lotSerial)?.destinationLevel}
+                          </div>
+                        </div>
                       )}
                     </div>
-                    
-                    <div className="flex items-center gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Package className="w-4 h-4 text-gray-500" />
-                        <span className="text-gray-600">Qty: {item.quantity}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-gray-500" />
-                        <span className="text-gray-600">{item.rack} ({item.location})</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
-
-            {allPicked && (
-              <div className="bg-green-50 border-l-4 border-green-500 rounded-xl p-5">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
-                  <div className="flex-1">
-                    <div className="text-green-900 mb-1">Picking Complete!</div>
-                    <p className="text-green-700 mb-3">
-                      All items have been picked. Ready to deliver to {order.productionLine}.
-                    </p>
-                    <button className="w-full bg-green-600 text-white py-3 rounded-xl hover:bg-green-700 transition-colors">
-                      Confirm & Deliver
-                    </button>
-                  </div>
+          </>
+        ) : view === 'qty-input' && currentItemIndex !== null && order ? (
+          <div className="bg-blue-50 border-l-4 border-blue-500 rounded-xl p-5">
+            <div className="text-blue-900 font-medium mb-3">Enter Quantity</div>
+            <div className="text-gray-900 font-medium mb-1">{order.items[currentItemIndex].name}</div>
+            <p className="text-gray-600 text-sm mb-3">SKU: {order.items[currentItemIndex].sku}</p>
+            
+            <div className="mb-4 p-3 bg-white rounded-lg">
+              <div className="text-sm text-gray-600 mb-1">Required Quantity</div>
+              <div className="text-gray-900 font-medium">{order.items[currentItemIndex].quantity} units</div>
+            </div>
+            
+            <input
+              type="number"
+              value={currentPick.qty}
+              onChange={(e) => setCurrentPick({ ...currentPick, qty: e.target.value })}
+              onKeyDown={(e) => e.key === 'Enter' && handleQuantitySubmit()}
+              placeholder="Enter picked quantity"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
+              autoFocus
+            />
+            
+            {error && (
+              <p className="text-red-600 mb-3 text-sm">{error}</p>
+            )}
+            
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancelInput}
+                className="flex-1 bg-red-500 text-white py-3 rounded-xl hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleQuantitySubmit}
+                className="flex-1 bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        ) : view === 'rack-input' && currentItemIndex !== null && order ? (
+          <div className="bg-blue-50 border-l-4 border-blue-500 rounded-xl p-5">
+            <div className="text-blue-900 font-medium mb-3">Enter Destination Rack Position</div>
+            <div className="text-gray-900 font-medium mb-1">{order.items[currentItemIndex].name}</div>
+            <p className="text-gray-600 text-sm mb-3">Item: {order.items[currentItemIndex].sku}</p>
+            <p className="text-gray-600 text-sm mb-3">Lot/Serial: {order.items[currentItemIndex].lotSerial}</p>
+            <p className="text-gray-600 text-sm mb-3">From Location: {order.items[currentItemIndex].sourceLocation}</p>
+            
+            <div className="mb-4 p-3 bg-white rounded-lg">
+              <div className="text-sm text-gray-600 mb-1">Picked Quantity</div>
+              <div className="text-gray-900 font-medium">{currentPick.qty} {order.items[currentItemIndex].um}</div>
+            </div>
+            
+            <input
+              type="text"
+              value={currentPick.rack}
+              onChange={(e) => setCurrentPick({ ...currentPick, rack: e.target.value })}
+              onKeyDown={(e) => e.key === 'Enter' && handleRackSubmit()}
+              placeholder="Enter picked location "
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
+              autoFocus
+            />
+            
+            {error && (
+              <p className="text-red-600 mb-3 text-sm">{error}</p>
+            )}
+            
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancelInput}
+                className="flex-1 bg-red-500 text-white py-3 rounded-xl hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRackSubmit}
+                className="flex-1 bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        ) : view === 'level-input' && currentItemIndex !== null && order ? (
+          <div className="bg-blue-50 border-l-4 border-blue-500 rounded-xl p-5">
+            <div className="text-blue-900 font-medium mb-3">Enter Rack Level</div>
+            <div className="text-gray-900 font-medium mb-1">{order.items[currentItemIndex].name}</div>
+            <p className="text-gray-600 text-sm mb-3">SKU: {order.items[currentItemIndex].sku}</p>
+            
+            <div className="mb-4 space-y-2">
+              <div className="p-3 bg-white rounded-lg">
+                <div className="text-sm text-gray-600 mb-1">Picked Quantity</div>
+                <div className="text-gray-900 font-medium">{currentPick.qty} units</div>
+              </div>
+              <div className="p-3 bg-white rounded-lg">
+                <div className="text-sm text-gray-600 mb-1">From Rack</div>
+                <div className="text-gray-900 font-medium">{currentPick.rack}</div>
+              </div>
+            </div>
+            
+            <input
+              type="text"
+              value={currentPick.level}
+              onChange={(e) => setCurrentPick({ ...currentPick, level: e.target.value })}
+              onKeyDown={(e) => e.key === 'Enter' && handleLevelSubmit()}
+              placeholder="Enter level (e.g., 01, 02, 03)"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
+              autoFocus
+            />
+            
+            {error && (
+              <p className="text-red-600 mb-3 text-sm">{error}</p>
+            )}
+            
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancelInput}
+                className="flex-1 bg-red-500 text-white py-3 rounded-xl hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLevelSubmit}
+                className="flex-1 bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        ) : view === 'summary' && currentItemIndex !== null && order ? (
+          <div className="bg-green-50 border-l-4 border-green-500 rounded-xl p-5">
+            <div className="text-green-900 font-medium mb-3">Confirm Picking Details</div>
+            
+            <div className="bg-white rounded-xl p-4 mb-4 space-y-3">
+              <div>
+                <div className="text-sm text-gray-600 mb-1">Item</div>
+                <div className="text-gray-900 font-medium">{order.items[currentItemIndex].name}</div>
+                <div className="text-gray-600 text-sm">Item: {order.items[currentItemIndex].sku} Lot/Serial : {order.items[currentItemIndex].lotSerial}</div>
+              </div>
+              
+              <div className="pt-3 border-t border-gray-200 grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-sm text-gray-600 mb-1">Picked Quantity</div>
+                  <div className="text-gray-900 font-medium">{currentPick.qty} units</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-600 mb-1">Required Quantity</div>
+                  <div className="text-gray-900 font-medium">{order.items[currentItemIndex].quantity} units</div>
                 </div>
               </div>
-            )}
+              
+              <div className="pt-3 border-t border-gray-200">
+                <div className="text-sm text-gray-600 mb-1">From Location</div>
+                <div className="text-gray-900 font-medium">{currentPick.rack}-{currentPick.level}</div>
+              </div>
+            </div>
+            
+            <button
+              onClick={handleConfirmPick}
+              className="w-full bg-green-600 text-white py-3 rounded-xl hover:bg-green-700 transition-colors font-medium"
+            >
+              Confirm Pick
+            </button>
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Fixed Scanner at Bottom */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-200 shadow-lg p-4 z-20">
         <div className="max-w-md mx-auto">
-          {!order ? (
-            <>
-              <BarcodeScanner onScan={handleOrderScan} placeholder="Scan picking order (e.g., PICK2024001)" autoFocus />
-              <p className="text-gray-500 mt-2 text-center">Try: PICK2024001 or PICK2024002</p>
-            </>
-          ) : (
+          {view === 'picking' && order ? (
             <>
               <BarcodeScanner onScan={handleItemScan} placeholder="Scan item barcode" autoFocus />
-              {error && order && (
-                <p className="text-red-600 mt-2 text-center">{error}</p>
-              )}
+              <p className="text-gray-500 mt-2 text-center text-sm">Scan items from the picking list above</p>
             </>
+          ) : view === 'list' ? (
+            <div className="text-center text-gray-500 py-3">
+              Select a picking order above to begin
+            </div>
+          ) : (
+            <div className="text-center text-gray-500 py-3">
+              Complete the form above to continue
+            </div>
           )}
         </div>
       </div>

@@ -4,6 +4,6 @@
 frappe.ui.form.on("Inventory", {
 	refresh(frm) {
 
-        frm.disable_save();
+        //frm.disable_save();
  	},
 });

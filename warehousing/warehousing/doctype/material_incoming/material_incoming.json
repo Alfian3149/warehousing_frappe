@@ -21,11 +21,12 @@
   "column_break_xyzd",
   "order_date",
   "ship_date",
-  "transaction_date",
   "due_date",
+  "transaction_date",
   "column_break_elbh",
   "receiver",
   "packing_slip",
+  "remarks",
   "supplier_and_delivery_information_section",
   "supplier",
   "supplier_name",
@@ -57,6 +58,7 @@
   "physical_verification_html",
   "receipt_info_tab",
   "transfer_status_tab",
+  "rerun_putaway_ts",
   "putaway_transfer_task_id",
   "go_to_putaway_transfer_task",
   "section_break_khns",
@@ -92,8 +94,8 @@
   },
   {
    "fieldname": "packing_slip",
-   "fieldtype": "Small Text",
-   "label": "Delivery Info"
+   "fieldtype": "Data",
+   "label": "Packing Slip"
   },
   {
    "fieldname": "column_break_xyzd",
@@ -383,13 +385,23 @@
    "fieldname": "due_date",
    "fieldtype": "Date",
    "label": "Due Date"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "rerun_putaway_ts",
+   "fieldtype": "Button",
+   "label": "Rerun Putaway Transfer"
   }
  ],
  "grid_page_length": 50,
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-06 10:45:11.424691",
+ "modified": "2026-03-23 11:06:14.402996",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Material Incoming",

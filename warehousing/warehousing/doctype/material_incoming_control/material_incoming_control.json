@@ -8,8 +8,11 @@
   "default_site",
   "strict_when_qty_per_pallet_item_is_zero",
   "storage_can_mix_item",
+  "column_break_uriu",
   "rack_availability_threshold",
-  "qty_to_receive_tolerance"
+  "qty_to_receive_tolerance",
+  "section_break_olhc",
+  "part_group"
  ],
  "fields": [
   {
@@ -41,13 +44,27 @@
    "fieldname": "qty_to_receive_tolerance",
    "fieldtype": "Percent",
    "label": "Qty to receive tolerance (%)"
+  },
+  {
+   "fieldname": "part_group",
+   "fieldtype": "Table",
+   "label": "part_group",
+   "options": "Material Incoming Group Items"
+  },
+  {
+   "fieldname": "column_break_uriu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_olhc",
+   "fieldtype": "Section Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-03-02 10:55:05.088841",
+ "modified": "2026-03-09 13:33:21.763776",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Material Incoming Control",

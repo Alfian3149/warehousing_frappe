@@ -25,9 +25,7 @@
   "items",
   "item_picked_tracking_section",
   "reserved_task_entry",
-  "section_break_deru",
-  "get_stock_item",
-  "item_picklist",
+  "column_break_dpdm",
   "picklist_history_and_status",
   "picklist_tracking_tab"
  ],
@@ -85,7 +83,6 @@
    "reqd": 1
   },
   {
-   "collapsible": 1,
    "fieldname": "section_break_smwc",
    "fieldtype": "Section Break",
    "label": "Summary Request"
@@ -117,23 +114,6 @@
    "options": "doctype_source"
   },
   {
-   "fieldname": "section_break_deru",
-   "fieldtype": "Section Break",
-   "label": "Stock Assignment by FIFO"
-  },
-  {
-   "description": "When this action confirmed, system will search the material by FIFO to fullfill the requirement in summary request.\n<br> (Actions via this button do not yet book stock. Booking is done when confirming the picklist.)",
-   "fieldname": "get_stock_item",
-   "fieldtype": "Button",
-   "label": "Get Stock Item"
-  },
-  {
-   "allow_on_submit": 1,
-   "fieldname": "item_picklist",
-   "fieldtype": "Table",
-   "options": "Item Picklist Detail"
-  },
-  {
    "fieldname": "picklist_tracking_tab",
    "fieldtype": "Tab Break",
    "label": "Picklist Tracking"
@@ -156,7 +136,8 @@
    "allow_on_submit": 1,
    "fieldname": "status",
    "fieldtype": "Select",
-   "label": "Status",
+   "in_list_view": 1,
+   "label": "Request Status",
    "options": "Open\nPartially Picked\nFully Picked"
   },
   {
@@ -168,6 +149,10 @@
    "fieldname": "item_picked_tracking_section",
    "fieldtype": "Section Break",
    "label": "Item Picked Tracking"
+  },
+  {
+   "fieldname": "column_break_dpdm",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
@@ -175,7 +160,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-25 12:26:11.698692",
+ "modified": "2026-03-31 05:40:23.494329",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Item Request",

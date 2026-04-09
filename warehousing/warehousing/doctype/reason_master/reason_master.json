@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_import": 1,
  "allow_rename": 1,
  "creation": "2026-02-16 14:53:39.637657",
  "doctype": "DocType",
@@ -26,7 +27,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-16 15:04:55.848937",
+ "modified": "2026-03-24 04:00:56.815356",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Reason Master",

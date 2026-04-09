@@ -12,6 +12,7 @@
   "reference_name",
   "column_break_epxl",
   "po_number",
+  "wo_split_number",
   "status",
   "section_break_sfld",
   "assign_to_user",
@@ -158,13 +159,19 @@
   {
    "fieldname": "column_break_epxl",
    "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "wo_split_number",
+   "fieldtype": "Data",
+   "label": "WO Split Number"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-28 09:07:15.449187",
+ "modified": "2026-03-31 07:49:58.989294",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Warehouse Task",

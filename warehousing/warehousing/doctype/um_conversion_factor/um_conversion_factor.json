@@ -21,6 +21,7 @@
    "default": "0",
    "fieldname": "default",
    "fieldtype": "Check",
+   "in_list_view": 1,
    "label": "Default"
   },
   {
@@ -36,7 +37,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-03-02 07:41:13.113763",
+ "modified": "2026-03-12 14:42:37.125524",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Um Conversion Factor",

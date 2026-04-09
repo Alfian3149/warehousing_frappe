@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_import": 1,
  "allow_rename": 1,
  "autoname": "field:status",
  "creation": "2026-01-29 13:48:26.739587",
@@ -27,7 +28,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-30 08:58:40.283252",
+ "modified": "2026-03-24 03:59:59.361223",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Inventory Status",

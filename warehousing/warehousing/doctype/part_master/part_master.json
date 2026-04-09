@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_import": 1,
  "allow_rename": 1,
  "autoname": "field:part",
  "creation": "2026-01-02 22:52:30.372700",
@@ -15,9 +16,12 @@
   "drawing_location",
   "expire_date_required",
   "automatic_create_lotserial",
+  "product_line",
+  "item_status",
   "column_break_nxpp",
   "qty_per_pallet",
   "category",
+  "item_group",
   "conversion_tab",
   "um_conversion_factor",
   "others_file_tab",
@@ -112,12 +116,28 @@
    "fieldname": "file",
    "fieldtype": "Attach",
    "label": "File"
+  },
+  {
+   "fieldname": "item_group",
+   "fieldtype": "Link",
+   "label": "Item Group",
+   "options": "Part Group Master"
+  },
+  {
+   "fieldname": "product_line",
+   "fieldtype": "Data",
+   "label": "Product Line"
+  },
+  {
+   "fieldname": "item_status",
+   "fieldtype": "Data",
+   "label": "Item Status"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-08 17:08:48.621695",
+ "modified": "2026-03-24 04:13:47.455311",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Part Master",

@@ -95,23 +95,25 @@ export function MaterialTransfer({ onBack }: MaterialTransferProps) {
 
         if (response.ok && data.message) {
           const actualData = Object.values(data.message)[0] as ItemData;
-          setItem(actualData);
-          console.log(actualData);
+          if (data.message["result"] !== "failed"){
             const itemData = actualData;
-            if (itemData) {
-              setItem(itemData);
-              setError('');
-              setStep('enter-quantity');
-            } else {
-              setError('Item not found in inventory');
-            }
+            setQuantity(itemData.availableQuantity);
+            setItem(actualData);
+            
+            setItem(itemData);
+            setError('');
+            setStep('enter-quantity');
+          }
+          else {
+              setError('Item not found or already scanned');
+          }
 
         } else {
-          setError(true);
+          setError('Item not found or already scanned');
         }
     } catch (err) {
-      console.error("Fetch error:", err);
-      setError(true);
+      setError('Item not found or already scanned');
+      //setError(true);
     } finally {
       setLoading(false);
     }
@@ -319,6 +321,10 @@ export function MaterialTransfer({ onBack }: MaterialTransferProps) {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Item:</span>
                   <span className="text-gray-900">{item?.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Lot/Serial:</span>
+                  <span className="text-gray-900">{item?.lotSerial}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Quantity:</span>

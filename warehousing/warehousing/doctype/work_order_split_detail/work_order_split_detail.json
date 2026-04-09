@@ -10,6 +10,7 @@
   "description",
   "um",
   "prod_line",
+  "item_group",
   "column_break_dbky",
   "qty_per_pallet",
   "net_weight",
@@ -17,9 +18,11 @@
   "qty_required",
   "qty_issued",
   "actual_required",
+  "qty_confirm",
   "column_break_mrxf",
   "availability",
-  "availability_in_percent"
+  "availability_in_percent",
+  "is_closed"
  ],
  "fields": [
   {
@@ -87,14 +90,33 @@
   {
    "fieldname": "actual_required",
    "fieldtype": "Float",
-   "label": "Act. Needed"
+   "label": "To Issued"
+  },
+  {
+   "fieldname": "qty_confirm",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Qty Request",
+   "reqd": 1
+  },
+  {
+   "fieldname": "item_group",
+   "fieldtype": "Data",
+   "label": "Item Group"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "0",
+   "fieldname": "is_closed",
+   "fieldtype": "Check",
+   "label": "is_closed?"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-02-04 16:38:29.054618",
+ "modified": "2026-04-02 07:02:46.642465",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Work Order Split Detail",

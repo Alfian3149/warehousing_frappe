@@ -4,7 +4,7 @@
 import frappe
 from frappe.model.document import Document
 from frappe.utils import flt
-
+from warehousing.warehousing.utils.wo_validation import WorkOrderValidator
 class WorkOrderSplit(Document):
 	def validate(self):
 		#FINISH GOOD ITEM
@@ -17,6 +17,8 @@ class WorkOrderSplit(Document):
 				"qty_per_pallet": self.fg_qty_per_pallet
 				})
 			new_item.insert()
+		validator = WorkOrderValidator(self.work_order)
+		validator.qty_tobe_produced(self.quantity_to_be_produced_immediately)
 		
 		#COMPONENT ITEM
 		self.ensure_item_details_exist_in_master()
@@ -38,36 +40,59 @@ class WorkOrderSplit(Document):
 
 
 	def on_submit(self): 
+
 		if self.is_create_mts:
-			method = int(self.calculation_request_method or 0)
-			#frappe.model.mapper.assign_confirm(self.doctype, self.name, "safno@gmail.com")
-			new_itmreq = frappe.new_doc("Item Request")
-			new_itmreq.purpose = "Manufacture"
-			new_itmreq.posting_date = self.posting_date
-			new_itmreq.required_by = self.required_by
-			new_itmreq.requestor_by = frappe.session.user
-			new_itmreq.target_location = self.shopfloor_location
-			new_itmreq.doctype_source = "Work Order Split"
-			new_itmreq.link = self.name
-
-			for item in self.work_order_split_detail:
-				qty_needed = 0
-				if method == 1: # berdasarkan actual required
-					qty_needed = flt(item.actual_required)
-				elif method == 2: # berdasarkan ketersediaan
-					qty_needed = flt(item.actual_required) - flt(item.availability)
-				else :
-					qty_needed = flt(item.actual_required)
-
-				new_item = new_itmreq.append("items")
-				new_item.site = self.site
-				new_item.part = item.part
-				new_item.um = item.um
-				new_item.quantity_requested = qty_needed
-				new_item.quantity_picked = 0
-				new_item.target_location = self.shopfloor_location
-			new_itmreq.insert()
-			new_itmreq.submit()
+			any_qty_requested = frappe.db.exists("Work Order Split Detail", {"parent": self.name, "qty_confirm": [">", 0]})
 			
-			self.db_set("link_to_item_request", new_itmreq.name)
+			if any_qty_requested :
+				new_itmreq = frappe.new_doc("Item Request")
+				new_itmreq.purpose = "Manufacture"
+				new_itmreq.posting_date = self.posting_date
+				new_itmreq.required_by = self.required_by
+				new_itmreq.requestor_by = frappe.session.user
+				new_itmreq.target_location = self.shopfloor_location
+				new_itmreq.doctype_source = "Work Order Split"
+				new_itmreq.link = self.name
+
+				for item in self.work_order_split_detail:
+					if item.qty_confirm <= 0 : 
+						continue
+					""" qty_needed = 0
+					if method == 1: # berdasarkan actual required
+						qty_needed = flt(item.actual_required)
+					elif method == 2: # berdasarkan ketersediaan
+						qty_needed = flt(item.actual_required) - flt(item.availability)
+					else :
+						qty_needed = flt(item.actual_required) """
+
+					new_item = new_itmreq.append("items")
+					new_item.site = self.site
+					new_item.part = item.part
+					new_item.um = item.um
+					new_item.quantity_requested = item.qty_confirm
+					new_item.quantity_picked = 0
+					new_item.target_location = self.shopfloor_location
+				new_itmreq.insert()
+				new_itmreq.submit()
+				
+				self.db_set("link_to_item_request", new_itmreq.name)
 			
+@frappe.whitelist() 
+def get_stock_availability_in_production(site, part, warehouse_location, wo_split_number=None):
+	getStock = frappe.db.get_value("Inventory", {"site": site, "part": part, "warehouse_location": warehouse_location}, "SUM(qty_on_hand) as qty_on_hand")
+	
+	#getQtyRequested =  frappe.db.get_value("Work Order Split Detail", {"part": part,  "is_closed": 0, "parent": ['not like', f"%{wo_split_number}%"]}, "SUM(actual_required) as actual_required")
+	getQtyRequested =  frappe.db.get_value("Work Order Split Detail", {"part": part,  "is_closed": 0}, "SUM(actual_required) as actual_required")
+
+	#getReserved = frappe.db.get_value("Reserved Task Entry", {"site": site, "part": part, "destination_location": warehouse_location}, "SUM(qty) as qty")
+	print(f"Item: {part}, getStock: {getStock}, getQtyRequested: {getQtyRequested}")
+	availability = 0
+	if getStock:
+		availability = getStock
+	if getQtyRequested :
+		availability -= getQtyRequested
+	
+	if availability < 0:
+		availability = 0
+
+	return {"availability": availability}

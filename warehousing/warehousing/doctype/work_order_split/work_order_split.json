@@ -15,7 +15,8 @@
   "column_break_zhaq",
   "work_order",
   "id",
-  "remarks",
+  "production_line",
+  "input_remarks",
   "column_break_snzp",
   "finish_good",
   "fg_description",
@@ -24,6 +25,7 @@
   "order_date",
   "release_date",
   "due_date",
+  "remarks",
   "status",
   "section_break_basz",
   "quantity_to_be_produced_immediately",
@@ -136,7 +138,8 @@
   {
    "fieldname": "remarks",
    "fieldtype": "Small Text",
-   "label": "Remarks"
+   "label": "Remarks",
+   "read_only": 1
   },
   {
    "fieldname": "um",
@@ -238,19 +241,32 @@
    "allow_on_submit": 1,
    "fieldname": "status",
    "fieldtype": "Select",
-   "label": "Status",
+   "in_list_view": 1,
+   "label": "Status WO",
    "options": "Draft\nSubmitted\nReady For Weighing\nIn Weighing\nReady For Blending\nCompleted"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "shopfloor_location",
    "fieldtype": "Link",
-   "label": "Shopfloor location",
-   "options": "Warehouse Location"
+   "label": "Destination Location",
+   "options": "Warehouse Location",
+   "reqd": 1
   },
   {
    "fieldname": "calculation_request_method",
    "fieldtype": "Int",
    "label": "Calculation Request Method"
+  },
+  {
+   "fieldname": "production_line",
+   "fieldtype": "Data",
+   "label": "Production Line"
+  },
+  {
+   "fieldname": "input_remarks",
+   "fieldtype": "Small Text",
+   "label": "Input Remarks"
   }
  ],
  "grid_page_length": 50,
@@ -258,7 +274,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-26 05:49:02.677234",
+ "modified": "2026-04-08 15:16:51.663322",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Work Order Split",

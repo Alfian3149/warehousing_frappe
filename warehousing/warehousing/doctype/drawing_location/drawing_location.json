@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_import": 1,
  "allow_rename": 1,
  "autoname": "field:drawing_location",
  "creation": "2026-02-12 11:55:28.071309",
@@ -30,7 +31,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-12 12:05:11.268291",
+ "modified": "2026-03-24 04:02:46.878140",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Drawing Location",

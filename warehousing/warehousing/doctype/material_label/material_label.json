@@ -9,9 +9,15 @@
   "material_incoming_link",
   "line",
   "item",
+  "description",
+  "um",
   "lotserial",
   "pallet",
   "qty",
+  "qty_per_pallet",
+  "expire",
+  "um_packaging",
+  "conversion_factor",
   "barcode_fwrj",
   "last_printed_on",
   "printed_by"
@@ -76,12 +82,42 @@
    "fieldtype": "Link",
    "label": "Printed By",
    "options": "User"
+  },
+  {
+   "fieldname": "um_packaging",
+   "fieldtype": "Data",
+   "label": "UM Packaging"
+  },
+  {
+   "fieldname": "conversion_factor",
+   "fieldtype": "Float",
+   "label": "Conversion Factor"
+  },
+  {
+   "fieldname": "um",
+   "fieldtype": "Data",
+   "label": "UM"
+  },
+  {
+   "fieldname": "expire",
+   "fieldtype": "Date",
+   "label": "Expire"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "fieldname": "qty_per_pallet",
+   "fieldtype": "Float",
+   "label": "Qty Per Pallet"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-19 18:21:35.662446",
+ "modified": "2026-03-27 16:11:16.932259",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Material Label",

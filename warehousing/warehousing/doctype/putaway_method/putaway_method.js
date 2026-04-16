@@ -95,6 +95,7 @@ frappe.ui.form.on("Putaway Method", {
                             let row = frm.add_child('locations');
                             // Sesuaikan 'warehouse' dengan nama field di child table Anda
                             row.location = doc.name; 
+                            row.priority = 1; 
                             row.capacity = doc.total_capacity; 
                             row.um = doc.um; 
                             frm.refresh_field('locations');

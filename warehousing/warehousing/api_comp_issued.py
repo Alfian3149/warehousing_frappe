@@ -16,14 +16,14 @@ def component_issued_API(wo_comp_issued_name):
         return data
 
     wo_comp_issued_doc = frappe.get_doc("Work Order Comp Issued", wo_comp_issued_name)
-    work_order_split_doc = frappe.get_doc("Work Order Split", wo_comp_issued_doc.work_order_split_number)
+    #work_order_split_doc = frappe.get_doc("Work Order Split", wo_comp_issued_doc.work_order_split_number)
     effDate = str(getdate(nowdate()))
     data = {
         "dsWOComIssueTrans": {
             "ttWorkOrderInfo": [
                 {
                     "ttWoNbr": wo_comp_issued_doc.work_order_number,
-                    "ttWoLot": wo_comp_issued_doc.wo_id_qad,
+                    "ttWoLot": wo_comp_issued_doc.id,
                     "ttOp": 0,
                     "ttEffDate": effDate,
                     "ttIssueAlloc": False,
@@ -43,9 +43,9 @@ def component_issued_API(wo_comp_issued_name):
         if key not in WorkOrderComp:
             WorkOrderComp[key] = {
                 "ttWoNbr": wo_comp_issued_doc.work_order_number,
-                "ttWoLot": wo_comp_issued_doc.wo_id_qad,
+                "ttWoLot": wo_comp_issued_doc.id,
                 "ttPart": d.part,
-                "srSite":  work_order_split_doc.site,
+                "srSite":  "1000",
                 "ttQty": 0,
                 "ttMultiEntryField": True
             }
@@ -53,9 +53,9 @@ def component_issued_API(wo_comp_issued_name):
 
         data["dsWOComIssueTrans"]["ttMultiEntry"].append({
             "ttWoNbr": wo_comp_issued_doc.work_order_number,
-            "ttWoLot": wo_comp_issued_doc.wo_id_qad,
+            "ttWoLot": wo_comp_issued_doc.id,
             "ttPart": d.part,
-            "srSite": work_order_split_doc.site,
+            "srSite": "1000",
             "srLoc": d.from_location,
             "srLotser": d.lot_serial,
             "srQty": flt(d.quantity),

@@ -124,7 +124,7 @@
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-09 10:22:46.065482",
+ "modified": "2026-04-10 08:41:15.009947",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Inventory",
@@ -146,6 +146,7 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
+ "search_fields": "part , lot_serial , warehouse_location , qty_on_hand",
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": []

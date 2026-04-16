@@ -6,6 +6,7 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "form_request_tab",
   "section_break_17lh",
   "amended_from",
   "naming_series",
@@ -46,7 +47,9 @@
   "calculation_request_method",
   "link_to_item_request",
   "section_break_ufxb",
-  "work_order_split_detail"
+  "work_order_split_detail",
+  "tab_2_tab",
+  "wo_tracking_html"
  ],
  "fields": [
   {
@@ -232,6 +235,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "link_to_item_request",
    "fieldtype": "Link",
    "label": "Link To Item request",
@@ -260,13 +264,28 @@
   },
   {
    "fieldname": "production_line",
-   "fieldtype": "Data",
-   "label": "Production Line"
+   "fieldtype": "Select",
+   "label": "Production Line",
+   "options": "P1\nP2\nP3\nP4\nLiquid\nPastry"
   },
   {
    "fieldname": "input_remarks",
    "fieldtype": "Small Text",
    "label": "Input Remarks"
+  },
+  {
+   "fieldname": "tab_2_tab",
+   "fieldtype": "Tab Break",
+   "label": "WO Tracking"
+  },
+  {
+   "fieldname": "form_request_tab",
+   "fieldtype": "Tab Break",
+   "label": "Form Request"
+  },
+  {
+   "fieldname": "wo_tracking_html",
+   "fieldtype": "HTML"
   }
  ],
  "grid_page_length": 50,
@@ -274,7 +293,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-08 15:16:51.663322",
+ "modified": "2026-04-16 09:55:08.681292",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Work Order Split",

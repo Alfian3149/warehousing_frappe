@@ -102,10 +102,12 @@ def delete_inventory_existing():
 
 def bulk_insert_inventory(data):
     delete_inventory_existing()
+    now = frappe.utils.now()
     inventory_list = []
     for item in data["message"]:
-        inventory_list.append({
-            "doctype": "Inventory",
+        part = frappe.db.get_value("Um Conversion Factor", {"parent": item['ttpart'], "default": True}, ["conversion_factor", "in_packaging_um"])
+
+        """ inventory_list.append({
             "site": item['ttsite'],
             "part": item['ttpart'],
             "lot_serial": item['ttlot'],
@@ -115,9 +117,26 @@ def bulk_insert_inventory(data):
             "warehouse_location": item['ttloc'],
             "inventory_status": item['ttstatus'],
             "expire_date": item['ttexpire'],
-            "um_packaging": item['ttpart'],
-            "conversion_factor": item['ttpart'],
-        })
+            "um_packaging": part[1] if part else None,
+            "conversion_factor": part[0] if part else None,
+        }) """
+        inventory_list.append((
+            frappe.generate_hash(length=10),
+            frappe.session.user,
+            now,
+            now,
+            item['ttsite'],
+            item['ttpart'],
+            item['ttlot'],
+            flt(item['ttqty_oh']),
+            item['ttpart_um'],
+            flt(item['ttpart_qty_per_pallet']),
+            item['ttloc'],
+            item['ttstatus'],
+            item['ttexpire'],
+            part[1] if part else None,
+            part[0] if part else 0,
+        ))
     if inventory_list:
-        frappe.db.bulk_insert(inventory_list)
+        frappe.db.bulk_insert("Inventory", fields=["name", "owner", "creation", "modified", "site", "part", "lot_serial", "qty_on_hand", "um", "qty_per_pallet", "warehouse_location", "inventory_status", "expire_date", "um_packaging", "conversion_factor"], values=inventory_list)
         frappe.db.commit()

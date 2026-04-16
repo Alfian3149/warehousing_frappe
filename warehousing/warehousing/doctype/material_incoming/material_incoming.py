@@ -105,7 +105,9 @@ class MaterialIncoming(Document):
 				if result:
 					row.conversion_factor, row.um_conversion = result
 				else:
-					frappe.throw("Default unit of measure conversion must be defined in Um Conversion Factor for item " + row.item_number, frappe.ValidationError)
+					row.conversion_factor = 1
+					row.um_conversion = row.um
+					#frappe.throw("Default unit of measure conversion must be defined in Um Conversion Factor for item " + row.item_number, frappe.ValidationError)
 
 	def validate_qty_to_receive(self):
 		line_item = self.material_incoming_item

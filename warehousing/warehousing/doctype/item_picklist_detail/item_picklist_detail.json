@@ -19,7 +19,8 @@
   "to_location",
   "column_break_plai",
   "conversion_factor",
-  "um_conversion"
+  "um_conversion",
+  "item_grouping"
  ],
  "fields": [
   {
@@ -103,13 +104,18 @@
    "fieldname": "um_conversion",
    "fieldtype": "Data",
    "label": "UM Conversion"
+  },
+  {
+   "fieldname": "item_grouping",
+   "fieldtype": "Data",
+   "label": "Item Grouping"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-03-24 09:59:23.863933",
+ "modified": "2026-04-16 13:15:27.342306",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Item Picklist Detail",

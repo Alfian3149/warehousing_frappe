@@ -16,10 +16,12 @@
   "parent_warehouse_location",
   "total_capacity",
   "um",
+  "total_pallet_maximum",
   "section_break_yubr",
   "total_reserved",
   "can_putaway_reserved",
   "can_picking_reserved",
+  "can_reserved_for_wo_comp_issued",
   "section_break_izbu",
   "status",
   "section_break_hg9h",
@@ -144,13 +146,24 @@
    "fieldtype": "Check",
    "in_list_view": 1,
    "label": "Can Picking Reserved?"
+  },
+  {
+   "default": "0",
+   "fieldname": "can_reserved_for_wo_comp_issued",
+   "fieldtype": "Check",
+   "label": "can reserved for WO Comp Issued?"
+  },
+  {
+   "fieldname": "total_pallet_maximum",
+   "fieldtype": "Int",
+   "label": "Total Pallet Maximum"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_tree": 1,
  "links": [],
- "modified": "2026-03-31 06:25:24.357439",
+ "modified": "2026-04-09 15:53:08.606843",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Warehouse Location",

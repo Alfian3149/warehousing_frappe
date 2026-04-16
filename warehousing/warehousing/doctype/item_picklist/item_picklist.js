@@ -3,15 +3,55 @@
  
 frappe.ui.form.on("Item Picklist", {
     onload(frm) {
+        frm.set_df_property('item_picklist_summary', 'cannot_add_rows', true);
+        frm.set_df_property('item_picklist_summary', 'cannot_delete_rows', true);
         if (frm.doc.needed_date == undefined){
-        frm.set_value("needed_date", frappe.datetime.get_today())
+            frm.set_value("needed_date", frappe.datetime.get_today())
+        } 
+    },
+
+    before_save: function(frm) {
+        // Mengambil nama baris (name/ID) yang sedang dicentang di grid
+        let selected_rows = frm.fields_dict['item_picklist_summary'].grid.get_selected();
+        
+        if (selected_rows.length > 0) {
+            console.log("Baris yang sedang dicentang:", selected_rows);
+            
+            frm.doc.item_picklist_summary.forEach(d => {
+                let status = selected_rows.includes(d.name) ? 1 : 0;
+                frappe.model.set_value(d.doctype, d.name, 'is_selected', status);
+            });
+        
         }
     },
+ 
  	refresh(frm) {
+        frm.events.sync_grid_selection(frm);
+        /* frm.fields_dict['item_picklist_summary'].grid.wrapper.on('click', '.grid-row-checkbox', function() {
+            alert("test");
+            // Berikan sedikit delay agar Frappe selesai mengupdate state grid
+            setTimeout(() => {
+                let selected_rows = frm.get_field('item_picklist_summary').grid.get_selected();
+                alert("Jumlah baris dicentang sekarang:");
+                
+                // Contoh: Update field total di header berdasarkan baris terpilih
+                //update_total_selected(frm, selected_rows);
+            }, 100);
+        }); */
+
+         //frm.set_df_property('item_picklist_summary', 'read_only', true);
+         frm.set_df_property('item_picklist_summary', 'cannot_add_rows', true);
+         frm.set_df_property('item_picklist_summary', 'cannot_delete_rows', true);
+
+         frm.set_df_property('item_picklist_detail', 'cannot_add_rows', true);
+
+         frm.fields_dict['item_picklist_detail'].grid.wrapper.find('.grid-row-checkbox').hide();
+         frm.fields_dict['item_picklist_detail'].grid.wrapper.find('.row-check').hide();
          frm.set_query('select_request', function() {
             return {
                 filters: {
-                    'status': ['!=', 'Fully Picked']
+                    'status': ['!=', 'Fully Picked'],
+                    'docstatus':['!=', '2']
                 }
             };
         });
@@ -23,6 +63,26 @@ frappe.ui.form.on("Item Picklist", {
             };
         }); */
  	},
+
+    sync_grid_selection: function(frm) {
+        // Iterasi setiap baris di child table 'items'
+        frm.doc.item_picklist_summary.forEach(d => {
+            // Jika data is_selected bernilai true (1)
+            if (d.is_selected) {
+                // Cari index baris berdasarkan nama/ID baris
+                let grid_row = frm.fields_dict['item_picklist_summary'].grid.grid_rows_by_docname[d.name];
+                
+                if (grid_row) {
+                    // Berikan centang pada checkbox bawaan secara visual
+                    grid_row.select(true);
+                }
+            }
+        });
+        
+        // Refresh grid untuk memastikan tampilan checkbox terupdate
+        frm.fields_dict['item_picklist_summary'].grid.refresh();
+    },
+
 	get_item_stock(frm) {
     
         frappe.call({
@@ -44,6 +104,12 @@ frappe.ui.form.on("Item Picklist", {
                         });
                     return;
                 }
+                frm.set_df_property('item_picklist_summary', 'cannot_add_rows', true);
+                frm.set_df_property('item_picklist_summary', 'cannot_delete_rows', true);
+                frm.set_df_property('item_picklist_detail', 'cannot_add_rows', true);
+                frm.set_df_property('item_picklist_detail', 'cannot_delete_rows', true);
+                
+
                 frm.clear_table('item_picklist_summary');
                 frm.clear_table('item_picklist_detail');
                 //alert(results);
@@ -53,6 +119,7 @@ frappe.ui.form.on("Item Picklist", {
                     summary_child.site= row.site;
                     summary_child.quantity_requested= row.quantity_requested;
                     summary_child.quantity_picked= row.quantity_picked;
+                    summary_child.item_grouping= row.item_group;
                 });
                 
                 results.forEach(row => {
@@ -69,9 +136,12 @@ frappe.ui.form.on("Item Picklist", {
                     child.um_conversion = row.um_conversion;
                     child.from_location = row.from_location;
                     child.to_location= row.to_location;
+                    child.item_grouping= row.item_group;
                 });
                 frm.refresh_field('item_picklist_summary');
                 frm.refresh_field('item_picklist_detail');
+                frm.fields_dict['item_picklist_detail'].grid.wrapper.find('.grid-row-checkbox').hide();
+                frm.fields_dict['item_picklist_detail'].grid.wrapper.find('.row-check').hide();
             }
         })
         
@@ -80,13 +150,15 @@ frappe.ui.form.on("Item Picklist", {
     
 });
 
+frappe.ui.form.on('Item Picklist Summary', {
+});
 
 frappe.ui.form.on('Item Picklist Detail', {
     quantity: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
         
         if (row.part) {
-            update_summary_total(frm, row.item_code);
+            update_summary_total(frm, row.part);
         }
     },
     items_remove: function(frm) {
@@ -101,7 +173,7 @@ var update_summary_total = function(frm, item_code) {
 
     // 1. Hitung total qty dari detail table untuk item tersebut
     (frm.doc.item_picklist_detail || []).forEach(d => {
-        if (d.item_code === item_code) {
+        if (d.part === item_code) {
             total += flt(d.quantity);
         }
     });
@@ -109,7 +181,7 @@ var update_summary_total = function(frm, item_code) {
     // 2. Cari baris yang sesuai di summary table dan update
     let summary_row_found = false;
     (frm.doc.item_picklist_summary || []).forEach(s => {
-        if (s.item_code === item_code) {
+        if (s.part === item_code) {
             s.quantity_picked = total;
             summary_row_found = true;
         }

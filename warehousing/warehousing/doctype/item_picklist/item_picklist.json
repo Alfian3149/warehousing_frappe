@@ -78,10 +78,11 @@
   }
  ],
  "grid_page_length": 50,
+ "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-03-30 14:01:24.151023",
+ "modified": "2026-04-16 11:18:13.242323",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Item Picklist",

@@ -19,6 +19,7 @@ class PickingItem:
     quantity_requested: int
     quantity_picked: int
     target_location: str
+    item_group : str
 
 @frappe.whitelist()
 def update_inventory_qty(doctype, doctype_link, transType, postingDate, site, part, lot_serial, reference, whs_location, qty_change, invStatus=None, expireDate=None, poNumber=None, poLine=None):
@@ -122,6 +123,53 @@ def get_iventory_by_item_location(item_list, in_location):
         qty_item_in = {"part":item, "total_qty":total_qty}
     return qty_item_in
 
+@frappe.whitelist() 
+def get_inventory_clean_for_production(site, item, lotserial, status, qty_needed): 
+    notOk = False
+    message = ""
+    clean_iventory = []
+    stocks = frappe.db.sql(f"""
+            SELECT 
+                inv.name, inv.site, inv.part, inv.warehouse_location, inv.lot_serial, inv.qty_on_hand, inv.qty_reserverd, inv.expire_date, inv.conversion_factor, inv.um_packaging, inv.qty_per_pallet
+            FROM 
+                `tabInventory` inv
+            JOIN 
+                `tabWarehouse Location` loc ON inv.warehouse_location = loc.name
+            WHERE 
+                inv.site = %s 
+                AND inv.part = %s 
+                AND inv.lot_serial = %s
+                AND inv.inventory_status = %s
+                AND (inv.expire_date > %s OR inv.expire_date IS NULL OR inv.expire_date = '')
+                AND inv.qty_on_hand > 0
+                AND loc.is_active = 1
+                AND loc.can_reserved_for_wo_comp_issued = 1 
+            ORDER BY 
+                inv.lot_serial ASC
+    """, (site, item, lotserial, status, frappe.utils.nowdate()), as_dict=True)
+
+    for row in stocks:
+        available = flt(row.qty_on_hand) - flt(row.qty_reserverd)
+        not_handover_yet = frappe.db.get_list("Lot Serial Handover Yet", 
+            {"site": site, "part": row.part, "lotserial": row.lot_serial}, 
+            ["SUM(qty_on_hand) as qty"])
+        if not_handover_yet:
+            available -=  flt(not_handover_yet[0].qty)
+
+        if available > 0 :
+            #qty_reserved = flt(row.qty_reserverd) + flt(qty_needed)
+            #frappe.db.set_value('Inventory', row.name, 'qty_reserverd', min(qty_reserved, flt(row.qty_on_hand))  )
+            clean_iventory.append(row)
+
+    if not clean_iventory: 
+        notOk = True
+        message = "Not found available stock"
+
+    return {
+        "notOk": notOk,
+        "message": message,
+        "inventory":clean_iventory
+    }
 @frappe.whitelist()
 def delete_inventory_entry(site, part, lot_serial, reference, whs_location):
     """
@@ -173,7 +221,8 @@ def get_fifo_picklist_with_reserved(itemPicklistName, item_status):
                     site=default_site,
                     quantity_requested=item.quantity_requested,
                     quantity_picked=item.quantity_picked,
-                    target_location=item.target_location
+                    target_location=item.target_location,
+                    item_group= ""
                 )
             else:
                 # Jika SUDAH ADA, kita jumlahkan quantity_requested-nya (Merge)
@@ -293,23 +342,29 @@ def get_fifo_picklist_with_reserved(itemPicklistName, item_status):
                     qty_pallet = 0
                 
                 if can_take_from_this_lot < qty_per_pallet and final_needed >= can_take_from_this_lot:
-                    # Kita anggap ini "Pallet Clearance" - ambil apa adanya tanpa rounding lagi
+                    # Kita anggap ini "Pallet Clearance" - ambil apa adanya tanpa rounding lagi [ini untuk pallet yang sudah tidak utuh jadi didahulukan ambil 1 pallet]
                     take_qty = can_take_from_this_lot
      
                 else:
-                    if remaining_needed >= qty_per_pallet:
+                    if remaining_needed >= qty_per_pallet and qty_per_pallet > 1:
                         # Ambil maksimal isi pallet ini
                         take_qty = min(can_take_from_this_lot, qty_per_pallet)
                     else:   
-                        # Rounding berdasarkan packaging
-                        rounded_qty = math.ceil(remaining_needed / qty_per_pkg) * qty_per_pkg
-                        take_qty = min(can_take_from_this_lot, rounded_qty)
+                        if qty_per_pkg > 1 :
+                            # Rounding berdasarkan packaging
+                            rounded_qty = math.ceil(remaining_needed / qty_per_pkg) * qty_per_pkg
+                            take_qty = min(can_take_from_this_lot, rounded_qty)
+                        else:
+                            take_qty = flt(remaining_needed)
 
+
+                part = frappe.db.get_value("Part Master", "120-013", ["description","um", "item_group"], as_dict=1)
                 results.append({
                     "site": stock_oh.site,
                     "part": stock_oh.part,
-                    "description": frappe.db.get_value("Part Master", stock_oh.part, "description"),
-                    "um": frappe.db.get_value("Part Master", stock_oh.part, "um"),
+                    "description": part.description,
+                    "um": part.um,
+                    "item_group": part.item_group,
                     "qty_per_pallet": qty_per_pallet,
                     "amt_pallet": qty_pallet, 
                     "from_location": stock_oh.warehouse_location,
@@ -322,6 +377,7 @@ def get_fifo_picklist_with_reserved(itemPicklistName, item_status):
                 allocated_qty += take_qty
 
                 unique_items[stock_oh.part].quantity_picked += take_qty
+                unique_items[stock_oh.part].item_group = part.item_group
                 #PickItem = PickingItem(part=stock_oh.part)
                 #PickItem.quantity_picked += take_qty
     final_list = list(unique_items.values())

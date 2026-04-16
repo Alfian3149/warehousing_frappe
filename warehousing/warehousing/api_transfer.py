@@ -9,7 +9,7 @@ import xml.etree.ElementTree as ET
 from frappe.utils import getdate, nowdate, formatdate
 
 @frappe.whitelist()
-def transfer_submit_to_qad(doc_name):
+def transfer_submit_to_qad(details):
     url = "http://127.0.0.1:24079/wsa/smiiwsa"
     data = test_internal_api(url)
     if data.get("status") == "failed" : 
@@ -102,13 +102,13 @@ def transfer_submit_to_qad(doc_name):
         frappe.throw(_("Terjadi kesalahan saat menghubungi QAD: {0}").format(str(e)))
 
 @frappe.whitelist()
-def transfer_submit_detail_task(doc_name):
+def transfer_submit_detail_task(details, ref_doctype, doc_name):
     url = "http://127.0.0.1:24079/wsa/smiiwsa"
     data = test_internal_api(url)
     if data.get("status") == "failed" : 
         return data
 
-    default_site = frappe.db.get_single_value("Material Incoming Control", "default_site")
+    """ default_site = frappe.db.get_single_value("Material Incoming Control", "default_site")
 
     data = frappe.get_doc("Warehouse Task Detail", doc_name)
     details = []
@@ -132,7 +132,7 @@ def transfer_submit_detail_task(doc_name):
         "lotrefTo":"",
         "usefrom":True,
         "useto":False,
-    })
+    }) """
     
     final_payload = {
         "dsTransLotSerial": {
@@ -165,7 +165,7 @@ def transfer_submit_detail_task(doc_name):
         "url": url,
         "data": json.dumps(payload, indent=4) if isinstance(payload, (dict, list)) else payload,
         "status": "Queued",
-        "reference_doctype": "Warehouse Task",
+        "reference_doctype": ref_doctype,
         "reference_name": doc_name
     })
     int_log.insert(ignore_permissions=True)

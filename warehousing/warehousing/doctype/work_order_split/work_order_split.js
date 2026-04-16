@@ -2,9 +2,30 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on('Work Order Split', {
+    onload: function(frm) {
+        if (frm.is_new()) {
+            frm.clear_table("work_order_split_detail");
+            frm.refresh_field("work_order_split_detail");
+            console.log("ONLOAD");
+        }
+    },
 	refresh(frm) {
+        frm.set_df_property('work_order_split_detail', 'cannot_add_rows', true);
         if (frm.doc.docstatus === 0 && !frm.is_new()) {
             frm.page.set_primary_action(__('Submit'), function() {
+                frappe.confirm('Are you sure you want to proceed?',
+                () => {
+                    frm.set_value("calculation_request_method", 2);
+                    frm.set_value("status", "Submitted");
+
+                    frm.save('Submit');
+                }, () => {
+                    'Continue',
+                    true
+                })
+            });
+        
+            /* frm.page.set_primary_action(__('Submit'), function() {
                 let d = new frappe.ui.Dialog({
                     title: 'Konfirmasi Permintaan Material',
                     fields: [
@@ -30,23 +51,38 @@ frappe.ui.form.on('Work Order Split', {
                 });
                 
                 d.show();
-            });
+            }); */
         }
 	    frm.fields_dict['work_order'].$input.on('blur', function() {
-	        if (frm.doc.work_order){frm.trigger('fetch_workorder_from_qad');}
+
+	        if (frm.is_new() && frm.doc.work_order){
+                frm.clear_table("work_order_split_detail");
+                frm.refresh_field("work_order_split_detail");
+
+                frm.set_value("quantity_to_be_produced_immediately",0);
+                frm.set_value("qty_in_tonnase",0);
+                frm.set_value("shopfloor_location","");
+                frm.trigger('fetch_workorder_from_qad');
+                console.log("INPUT WORK ORDER");
+                setTimeout(() => { 
+                    console.log("load history");
+                    frm.trigger('load_wo_history');
+                }, 500); 
+            }
+            
 	    });  
 	 
 	    frm.fields_dict['quantity_to_be_produced_immediately'].$input.on('blur', function() {
-
+            //alert("test");
 	        if(frm.doc.quantity_to_be_produced_immediately > 0 && frm.doc.work_order){
                 frm.set_value("qty_in_tonnase",frm.doc.quantity_to_be_produced_immediately / 1000);
 	            frm.trigger('fetch_simulated_picklist_item');
 	        }
 	    });
 	    
-	    if (frm.doc.shopfloor_location){
+	    /* if (frm.doc.shopfloor_location){
 	        frm.trigger('get_availablity_stock');
-	    }
+	    } */
 	},
 
 	
@@ -69,12 +105,19 @@ frappe.ui.form.on('Work Order Split', {
                         let target_row = (frm.doc.work_order_split_detail || []).find(row => row.part === api_row.ttdet_component);
                 
                         if (target_row) {
-                            let percent = 0;
-                            frappe.model.set_value(target_row.doctype, target_row.name, 'actual_required', api_row.ttdet_qty_req);
-                            if (target_row.availability > 0) {
-                                percent = target_row.availability / api_row.ttdet_qty_req * 100;
-                                frappe.model.set_value(target_row.doctype, target_row.name, 'availability_in_percent', percent);
-                            }
+                            frappe.db.get_single_value('Work Order Activity Control', 'buffer_tollerance')
+                            .then(value => {
+                                let percent = 0;
+                                let required = flt(api_row.ttdet_qty_req) + (flt(api_row.ttdet_qty_req) * flt(value) / 100) ;
+                                frappe.model.set_value(target_row.doctype, target_row.name, 'actual_required', required);
+                                if (target_row.availability > 0) {
+                                    percent = flt(target_row.availability / required * 100, 0);
+                                    percent = cint(percent)
+                                    frappe.model.set_value(target_row.doctype, target_row.name, 'availability_in_percent', percent);
+                                }
+                            });
+
+
                             
                         }
                     });
@@ -132,27 +175,23 @@ frappe.ui.form.on('Work Order Split', {
                     let data = r.message.dsWOResponse;
                     frm.clear_table('work_order_split_detail');
 
-                    frappe.msgprint(data['womstr'].wopart);
                     if (data.woddet && data.woddet.length > 0) {
                         data.woddet.forEach(row => {
-                            
-                             let child = frm.add_child('work_order_split_detail');
-                             child.part = row.wodpart;
-                             child.description = row.wodpart_desc;
-                             child.um = row.wodpart_um;
-                             child.prod_line = row.wodprod_line;
-                             child.qty_per_pallet = row.wodpart_qtyperpallet;
-                             child.net_weight = row.wodpart_netwt;
-                             child.qty_required = row.wodqty_req;
-                             child.qty_issued = row.wodqty_iss;
-                             child.qty_confirm = 0;
-                             child.qty_confirm = 0;
-                             child.qty_issued = 0;
-                             frappe.db.get_value("Part Master", {"name": row.wodpart},"item_group").then(value => {
-                                if (value.message && value.message.item_group){ 
-                                        child.item_group= value.message.item_group;
-                                }      
-                            });
+                            if (row.wodpart_grouping){
+                                let child = frm.add_child('work_order_split_detail');
+                                child.part = row.wodpart;
+                                child.description = row.wodpart_desc;
+                                child.um = row.wodpart_um;
+                                child.prod_line = row.wodprod_line;
+                                child.qty_per_pallet = row.wodpart_qtyperpallet;
+                                child.net_weight = row.wodpart_netwt;
+                                child.qty_required = row.wodqty_req;
+                                child.qty_issued = row.wodqty_iss;
+                                child.qty_confirm = 0;
+                                child.qty_confirm = 0;
+                                child.qty_issued = 0;
+                                child.item_group= row.wodpart_grouping;
+                            }      
      
                         });
                     }
@@ -179,7 +218,7 @@ frappe.ui.form.on('Work Order Split', {
     
                     setTimeout(() => { 
                         frm.refresh_field('work_order_split_detail');
-                    }, 1000);
+                    }, 500);
                 }
                 else {
                     frappe.msgprint(__("Work Order tidak ditemukan."));
@@ -191,5 +230,69 @@ frappe.ui.form.on('Work Order Split', {
         });
     },
     
+    load_wo_history: function(frm) {
+        frappe.call({
+            method: "warehousing.warehousing.doctype.work_order_split.work_order_split.get_material_transfer_slip_history_by_wo",
+            args: {
+                work_order: frm.doc.work_order,
+                //current_doc: frm.doc.name
+            },
+            callback: function(r) {
+                let container = frm.get_field('wo_tracking_html').$wrapper;
+                
+                if (r.message && r.message.length > 0) {
+                    let html = `
+                        <table class="table table-bordered" style="font-size: 13px;">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Header</th>
+                                    <th>Item Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+
+                    r.message.forEach(row => {
+                        // Render Baris Item
+                        let item_rows = row.items.map(item => `
+                            <tr>
+                                <td>${item.part}</td>
+                                <td>${item.description}</td>
+                                <td>${item.um}</td>
+                                <td>${item.item_group}</td>
+                                <td class="text-right"><strong>${flt(item.qty_confirm)}</strong></td>
+                            </tr>
+                        `).join('');
+
+                        html += `
+                            <tr>
+                                <td class="bg-light" style="width: 30%;">
+                                    <b><a href="/app/work-order-split/${row.name}">${row.name}</a></b><br>
+                                    <small>Request Date: ${frappe.datetime.str_to_user(row.posting_date)}</small><br>
+                                    <small>Status: ${row.status}</small><br>
+                                    <b><a href="/app/item-request/${row.link_to_item_request}">${row.link_to_item_request}</a></b>
+                                </td>
+                                <td >
+                                    <table class="table table-sm p-1" style="border:none;">
+                                        <tr class="text-muted small">
+                                            <th>Part</th>
+                                            <th>Description</th>
+                                            <th>Um</th>
+                                            <th>Group</th>
+                                            <th class="text-right">Qty requested</th>
+                                        </tr>
+                                        ${item_rows}
+                                    </table>
+                                </td>
+                            </tr>`;
+                    });
+
+                    html += `</tbody></table>`;
+                    container.html(html);
+                } else {
+                    container.html('<div class="text-muted p-3">Belum ada riwayat..</div>');
+                }
+            }
+        });
+    },
 
 })

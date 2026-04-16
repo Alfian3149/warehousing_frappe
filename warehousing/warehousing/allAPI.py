@@ -71,7 +71,7 @@ def get_simulated_picklist_item(workOrder, site, part, qty, domain):
 
 
 @frappe.whitelist()
-def get_workorder_from_qad(work_order, domain, is_packaging=False, work_order_comp_issued_name=None): 
+def get_workorder_from_qad(work_order, domain, is_packaging=False, work_order_comp_issued_name=None, is_blending=False, production_qty=0): 
     time.sleep(1)
     if not work_order:
         frappe.throw(_("Work Order harus diisi"))
@@ -110,8 +110,16 @@ def get_workorder_from_qad(work_order, domain, is_packaging=False, work_order_co
         if response.status_code == 200:
             dataResponse = parse_qad_response(response.text)
             if is_packaging:
-                data_converted = convert_wo_api_result(dataResponse, work_order_comp_issued_name)
+                print("is_blending")
+                data_converted = convert_wo_api_packaging(dataResponse, work_order_comp_issued_name)
                 return data_converted
+            
+            if is_blending : 
+                print("is_blending")
+                data_converted_blending = convert_wo_api_blending(dataResponse, work_order_comp_issued_name, production_qty)
+                return data_converted_blending
+
+            print("NO=================")
             return dataResponse
         else:
             frappe.throw(_("Koneksi ke QAD Gagal: {0}").format(response.status_code))
@@ -120,9 +128,58 @@ def get_workorder_from_qad(work_order, domain, is_packaging=False, work_order_co
         frappe.log_error(frappe.get_traceback(), "QAD Get Work Order API Error")
         frappe.throw(_("Terjadi kesalahan saat menghubungi QAD: {0}").format(str(e)))
 
+def convert_wo_api_blending(dataResponse, work_order_comp_issued_name, production_qty):
+    womstr = dataResponse['dsWOResponse']['womstr']
+    woddet_baru = []
+    for item in dataResponse['dsWOResponse']['woddet']:
+        count_packaging = frappe.db.count(
+            "Product Line Allowed", 
+            filters={
+                "parent": "Work Order Activity Control", # Ganti dengan nama Single DocType Anda
+                "parenttype": "Work Order Activity Control", 
+                "product_line": item['wodprod_line'],
+                "part_group": "INGREDIENT"
+            }
+        )
+        item_group = ""
+        if count_packaging > 0:
+            item_group = "INGREDIENT"
+        else : 
+            item_group = "PACKAGING"
+        
+        woddet_baru.append({
+                "wodnbr": item['wodnbr'],
+                "wodlot": item['wodlot'],
+                "wodop": item['wodop'],
+                "wodpart": item['wodpart'],
+                "wodpart_um": item['wodpart_um'],
+                "wodpart_desc": item['wodpart_desc'],
+                "wodpart_qtyperpallet": item['wodpart_qtyperpallet'],
+                "wodpart_netwt": item['wodpart_netwt'],
+                "wodprod_line": item['wodprod_line'],
+                "woddoc_id": item['woddoc_id'],
+                "wodqty_pick": item['wodqty_pick'],
+                "wodqty_iss": item['wodqty_iss'],
+                "wodqty_chg": item['wodqty_chg'],
+                "wodqty_all": item['wodqty_all'],
+                "wodqty_req": item['wodqty_req'],
+                "wodsod_line": item['wodsod_line'],
+                "wodsod_nbr": item['wodsod_nbr'],
+                "wodstatus": item['wodstatus'],
+                "wodproject": item['wodproject'],
+                "item_group": item_group,
+        })
+    simulated_picklist = get_simulated_picklist_item(womstr[0]["wonbr"], womstr[0]["wosite"], womstr[0]["wopart"], production_qty, "SMII")
 
 
-def convert_wo_api_result(dataResponse, work_order_comp_issued_name):
+    return {"dsWOResponse": {
+        "womstr":womstr,
+        "woddet":woddet_baru,
+        "simulated_picklist":simulated_picklist["ttdet_table"] if simulated_picklist else [], 
+        }
+    }
+def convert_wo_api_packaging(dataResponse, work_order_comp_issued_name):
+
     womstr = dataResponse['dsWOResponse']['womstr']
     tt_fg_rct = dataResponse['dsWOResponse']['tt_fg_rct'] if 'tt_fg_rct' in dataResponse['dsWOResponse'] else []
     woddet_baru = []
@@ -180,9 +237,9 @@ def convert_wo_api_result(dataResponse, work_order_comp_issued_name):
                 "wodproject": item['wodproject'],
                 "item_group": item_group,
         })
+        
 
     if len(tt_fg_rct) > 0:
-        print(f"Length of tt_fg_rct: {len(tt_fg_rct)}")
         data = frappe.db.get_list("Work Order Comp Issued", filters={
             "name": ["!=", work_order_comp_issued_name], 
             "docstatus": ["!=", 2],
@@ -191,12 +248,13 @@ def convert_wo_api_result(dataResponse, work_order_comp_issued_name):
             fields=["wo_api"]
             )
 
-        print(f"data: {data}")
         data_nested = []
-        for d in data:
-            data_nested.append(d["tt_fg_rct"])
 
-        print(f"data_nested: {data_nested}")
+        if data:
+            dtjs = json.loads(data[0]["wo_api"])
+            data_nested.append(dtjs["tt_fg_rct"])
+
+
         if data_nested and len(data_nested) > 0:
             existing_lots = [item.get('tt_lot') for sublist in data_nested for item in sublist]
 
@@ -311,6 +369,7 @@ def po_receipt_JSON(parent_doc_name, material_incoming_name):
                     "site": material_incoming.site,
                     "loc": item.locationdestination,
                     "lotSer": item.lotserial,
+                    "ref": "",
                     "qty": 0, # Akan dijumlahkan dari semua lot
                     "expire": item.expired_date,
                     "rctstat": "P-GOOD",

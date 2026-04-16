@@ -4,7 +4,7 @@
 import frappe
 from frappe.model.document import Document
 from warehousing.warehousing.doctype.inventory.inventory import update_inventory_qty
-from frappe.utils import getdate
+from frappe.utils import getdate,  nowdate, formatdate
 from warehousing.warehousing.doctype.stock_ledger.stock_ledger import make_sl_entry
 
 class WarehouseTaskDetail(Document):
@@ -63,10 +63,34 @@ class WarehouseTaskDetail(Document):
 		init_sl = make_sl_entry(**data)
 		init_sl.create_new()
 
-		frappe.enqueue(
+		details = []
+		effDate = str(getdate(nowdate()))
+		if self.execution_time: 
+			effDate = str(getdate(self.execution_time))
+
+		details.append({
+			"ptPart":self.item,
+			"qty":self.qty_confirmation,
+			"effDate":effDate,
+			"rmks":self.name,
+			"siteFrom":default_site,
+			"locFrom":self.locationsource,
+			"lotserFrom":self.lotserial,
+			"lotrefFrom":"",
+			"siteTo":default_site,
+			"locTo":self.locationdestination,
+			"lotserTo":self.lotserial,
+			"lotrefTo":"",
+			"usefrom":True,
+			"useto":False,
+		})
+	
+		job = frappe.enqueue(
 			"warehousing.warehousing.api_transfer.transfer_submit_detail_task",
+			details=details,
+			ref_doctype="Warehouse Task Detail",
 			doc_name=self.name,
-			queue="long",       # Opsi: 'short', 'default', atau 'long'
+			queue="short",       # Opsi: 'short', 'default', atau 'long'
 			timeout=600,        # Durasi maksimal pengerjaan (detik)
 			is_async=True,
 			enqueue_after_commit=True # Menjamin job jalan SETELAH transaksi DB selesai

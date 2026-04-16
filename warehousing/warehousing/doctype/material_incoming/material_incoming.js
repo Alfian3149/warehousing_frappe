@@ -776,7 +776,7 @@ frappe.ui.form.on('Material Incoming Item', {
                         frappe.db.get_single_value('Material Incoming Control', 'qty_to_receive_tolerance')
                         .then(value => {
                             if (value){ 
-                                alert(value);
+                            
                                 qty_receive_allowed = row.qty_order + (row.qty_order * (value/100));
                                 qty_max_to_received_allowed = qty_receive_allowed -  (total_qty_to_receive +  row.qty_received)
                      

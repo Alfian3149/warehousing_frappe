@@ -13,7 +13,6 @@
    "fieldname": "request_master",
    "fieldtype": "Link",
    "label": "Request Master",
-   "link_filters": "{\"status\": \"Open\"}",
    "options": "Item Request"
   }
  ],
@@ -21,7 +20,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-03-29 04:25:33.842300",
+ "modified": "2026-04-16 09:56:14.240027",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Item Request Selection",

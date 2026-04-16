@@ -3,6 +3,7 @@
 
 frappe.ui.form.on('Item Request', {
 	refresh(frm) {
+        frm.set_df_property('items', 'cannot_add_rows', true);
         frm.trigger('reserved_material_detail');
 		frm.add_custom_button(__('Confirming Picklist'), function() {
             if (!frm.doc.item_picklist || frm.doc.item_picklist.length === 0) {
@@ -167,7 +168,7 @@ frappe.ui.form.on('Item Request', {
         
         
     }, 
-    
+        
     reserved_material_detail: function(frm) {
         frappe.call({
             method: 'frappe.client.get_list',

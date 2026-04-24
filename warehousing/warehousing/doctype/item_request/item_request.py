@@ -18,7 +18,20 @@ class ItemRequest(Document):
             frappe.db.set_value("Work Order Split", self.link, "status", "Ready For Weighing")
         else:
             self.status = "Open"
- 
+    
+    def validate(self):
+        self.update_status_based_on_details()
+
+    def update_status_based_on_details(self):
+        if not self.items:
+            self.status = "Open"
+            return
+
+        all_complete = all(flt(d.quantity_requested) - flt(d.quantity_picked) == 0 for d in self.items)
+        
+        if all_complete:
+            self.status = "Fully Picked"
+
 @frappe.whitelist()
 def comfirming_picklist(item_request_doc, child_table, task_type, date_instruction, time, assigned_to_person=None, assigned_to_role=None, ):  
     doc = frappe.get_doc("Item Request", item_request_doc)

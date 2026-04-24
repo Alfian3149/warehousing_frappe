@@ -52,7 +52,7 @@ export function HomeScreen({ onNavigate, employeeName, onLogout }: HomeScreenPro
       color: 'bg-pink-500',
     },
 
-    {
+    /* {
       id: 'consumption' as Screen,
       title: 'Material Consumption',
       description: 'Record production consumption',
@@ -65,7 +65,7 @@ export function HomeScreen({ onNavigate, employeeName, onLogout }: HomeScreenPro
       description: 'Return items to supplier',
       icon: Undo2,
       color: 'bg-red-500',
-    },
+    }, */
   ];
 
   return (

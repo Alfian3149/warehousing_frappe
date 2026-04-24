@@ -12,14 +12,14 @@ import time
 from frappe import _
 class WorkOrderCompIssued(Document):   
     def on_submit(self):
-        if self.for_material_packaging__blending == "Packaging":
+        if self.for_material_packaging__blending == "Packaging" or  self.for_material_packaging__blending == "Blending" :
             status = component_issued_API(self.name)
             if status.get("status") == "failed" : 
                 frappe.throw(_("Gagal mengirim data ke QAD atau terjadi kesalahan: {0}").format(status.get("message")))
             else:
-                if self.work_order_split_number:
-                    frappe.db.set_value("Work Order Split", self.work_order_split_number, {"status": "Completed"})
-                    frappe.db.set_value("Work Order Split Detail", {"parent": self.work_order_split_number}, {"is_closed": 1}, update_modified=False)
+                if self.mts_number:
+                    frappe.db.set_value("Work Order Split", self.mts_number, {"status": "Completed"})
+                    frappe.db.set_value("Work Order Split Detail", {"parent": self.mts_number}, {"is_closed": 1}, update_modified=False)
                 
                     #work_order_split_doc = frappe.get_doc("Work Order Split", self.work_order_split_number)
                 for item in self.item_issued:
@@ -40,32 +40,45 @@ class WorkOrderCompIssued(Document):
                     init_sl.create_new()
                 frappe.db.commit()
 
-    def before_submit(self):
-        details_issued = []
+    """ def before_submit(self):
+        details_issued = {}
+        
+        # 1. Kumpulkan data total quantity per part
         for item_issued in self.item_issued:
             key = item_issued.part
             if key not in details_issued:
-                details_issued[key] = {
-                    "total_quantity": 0,
-                }
+                details_issued[key] = {"total_quantity": 0}
             details_issued[key]["total_quantity"] += item_issued.quantity
 
+        # 2. Validasi jika tidak ada item yang di-issue sama sekali
         if not details_issued: 
-            frappe.throw(_("Material stock not found: {0}").format(status.get("message")))
+            frappe.throw(_("No items have been issued. Please check your entries."))
 
+        # 3. Bandingkan dengan kebutuhan (summary)
         for item_summary in self.item_summary_to_issued:
             key = item_summary.part
 
-            if not details_issued[key]["total_quantity"] : 
-                frappe.throw(_("Material stock for {key} is not found"))
+            # Gunakan .get() untuk menghindari KeyError jika key tidak ditemukan
+            issued_data = details_issued.get(key)
 
-            if  details_issued[key]["total_quantity"] <  item_summary.qty_needed:
-                frappe.throw(_("Material stock for {key} is not enough yet the required "))
-            
+            if issued_data:
+                total_qty = issued_data["total_quantity"]
+                qty_needed = item_summary.qty_needed
+                
+                if total_qty < qty_needed:
+                    # Menggunakan f-string atau .format() yang benar untuk pesan error
+                    frappe.throw(
+                        _("Material stock for {0} is not enough. Issued: {1}, Required: {2}")
+                        .format(key, total_qty, qty_needed)
+                    )
+            else:   
+                # Jika part yang diminta di summary tidak ada di details_issued
+                frappe.throw(_("Material stock for {0} was not found in the issued list").format(key))     """        
 
     def validate(self):
         if self.for_material_packaging__blending == "Packaging" and self.qty_product_completed_to_be_issued <= 0:
             frappe.throw(_("Qty Product Completed To be Issued must be greater than 0 for Packaging"))
+
 @frappe.whitelist() 
 def get_lotserial_issue_details(work_order_split_number):
     work_order_split = frappe.get_doc("Work Order Split", work_order_split_number)
@@ -137,7 +150,7 @@ def search_and_reserve_stock(site, summary_items, item_status):
         qty_needed = flt(row.get("qty_needed")) 
         stocks = frappe.db.sql(f"""
             SELECT 
-                inv.site, inv.part, inv.um, inv.warehouse_location, inv.lot_serial, inv.qty_on_hand, inv.expire_date, inv.conversion_factor, inv.um_packaging, inv.qty_per_pallet
+                inv.site, inv.part, inv.um, inv.warehouse_location, inv.lot_serial, inv.qty_on_hand, inv.qty_reserverd, inv.expire_date, inv.conversion_factor, inv.um_packaging, inv.qty_per_pallet
             FROM 
                 `tabInventory` inv
             JOIN 
@@ -151,17 +164,19 @@ def search_and_reserve_stock(site, summary_items, item_status):
                 AND loc.is_active = 1
                 AND loc.can_reserved_for_wo_comp_issued = 1 
             ORDER BY 
+                IFNULL(inv.expire_date, '9999-12-31') ASC,
                 inv.lot_serial ASC
         """, (site, part, item_status, frappe.utils.nowdate()), as_dict=True)
 
         for stock_oh in stocks:
             if qty_needed <= 0:
                 break
-            total_not_handovered_yet = frappe.db.get_list("Lot Serial Handover Yet", 
-            {"part": stock_oh.part}, 
-            ["SUM(quantity) as qty"])
+            #total_not_handovered_yet = frappe.db.get_list("Lot Serial Handover Yet", {"part": stock_oh.part}, ["SUM(quantity) as qty"])
 
-            available_qty = stock_oh.qty_on_hand - (total_not_handovered_yet[0].qty if total_not_handovered_yet and total_not_handovered_yet[0].qty else 0)
+            total_not_handovered_yet = frappe.db.get_list("Warehouse Task Detail", {"part":stock_oh.part, "lotserial":stock_oh.lot_serial, "locationdestination":stock_oh.warehouse_location, "has_handovered": 0}, ["SUM(qty_confirmation) as qty"])
+
+            available_qty = flt(stock_oh.qty_on_hand) - flt(stock_oh.qty_reserverd) 
+            available_qty -= flt(total_not_handovered_yet[0].qty if total_not_handovered_yet and total_not_handovered_yet[0].qty else 0)
 
             if available_qty <= 0:
                 continue
@@ -182,3 +197,53 @@ def search_and_reserve_stock(site, summary_items, item_status):
             qty_needed -= take_qty
     
     return reserved_items
+
+@frappe.whitelist() 
+def get_inventory_clean_for_production(site, item, lotserial, status, qty_needed): 
+    notOk = False
+    message = ""
+    clean_iventory = []
+    stocks = frappe.db.sql(f"""
+            SELECT 
+                inv.name, inv.site, inv.part, inv.warehouse_location, inv.lot_serial, inv.qty_on_hand, inv.qty_reserverd, inv.expire_date, inv.conversion_factor, inv.um_packaging, inv.qty_per_pallet
+            FROM 
+                `tabInventory` inv
+            JOIN 
+                `tabWarehouse Location` loc ON inv.warehouse_location = loc.name
+            WHERE 
+                inv.site = %s 
+                AND inv.part = %s 
+                AND inv.lot_serial = %s
+                AND inv.inventory_status = %s
+                AND (inv.expire_date > %s OR inv.expire_date IS NULL OR inv.expire_date = '')
+                AND inv.qty_on_hand > 0
+                AND loc.is_active = 1
+                AND loc.can_reserved_for_wo_comp_issued = 1 
+            ORDER BY 
+                IFNULL(inv.expire_date, '9999-12-31') ASC,
+                inv.lot_serial ASC
+    """, (site, item, lotserial, status, frappe.utils.nowdate()), as_dict=True)
+
+    for row in stocks:
+        available = flt(row.qty_on_hand) - flt(row.qty_reserverd)
+        #not_handover_yet = frappe.db.get_list("Lot Serial Handover Yet", {"site": site, "part": row.part, "lotserial": row.lot_serial}, ["SUM(qty_on_hand) as qty"])
+
+        total_not_handovered_yet = frappe.db.get_list("Warehouse Task Detail", {"part":row.part, "lotserial":row.lot_serial, "locationdestination":row.warehouse_location, "has_handovered": 0}, ["SUM(qty_confirmation) as qty"])
+
+        if total_not_handovered_yet:
+            available -=  flt(total_not_handovered_yet[0].qty)
+
+        if available > 0 :
+            #qty_reserved = flt(row.qty_reserverd) + flt(qty_needed)
+            #frappe.db.set_value('Inventory', row.name, 'qty_reserverd', min(qty_reserved, flt(row.qty_on_hand))  )
+            clean_iventory.append(row)
+
+    if not clean_iventory: 
+        notOk = True
+        message = "Not found available stock"
+
+    return {
+        "notOk": notOk,
+        "message": message,
+        "inventory":clean_iventory
+    }

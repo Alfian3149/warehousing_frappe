@@ -80,6 +80,7 @@ export function MaterialPicking({ onBack }: MaterialPickingProps) {
   const [mockOrders, setMockOrders] = useState<PickingOrder[]>([]);
   const [pickedItems, setPickedItems] = useState<PickedItemDetail[]>([]);
   const [currentItemIndex, setCurrentItemIndex] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
   const [currentPick, setCurrentPick] = useState<{
     qty: string;
     rack: string;
@@ -142,8 +143,8 @@ export function MaterialPicking({ onBack }: MaterialPickingProps) {
 
   const handleQuantitySubmit = () => {
     if (currentItemIndex === null || !order) return;
-
-    const qty = parseInt(currentPick.qty);
+    ;
+    const qty = parseFloat(currentPick.qty);
     if (isNaN(qty) || qty <= 0) {
       setError('Please enter a valid quantity');
       return;
@@ -153,8 +154,8 @@ export function MaterialPicking({ onBack }: MaterialPickingProps) {
       setError(`Quantity exceeds required amount (${order.items[currentItemIndex].quantity})`);
       return;
     }
-
-    setView('rack-input');
+    setView('summary');
+    //setView('rack-input');
     setError('');
   };
 
@@ -181,6 +182,7 @@ export function MaterialPicking({ onBack }: MaterialPickingProps) {
   const handleConfirmPick = async () => {
     if (currentItemIndex === null || !order) return;
 
+    setLoading(true);
     const item = order.items[currentItemIndex];
     const newPickedItem: PickedItemDetail = {
       keyId: item.keyId,
@@ -189,37 +191,47 @@ export function MaterialPicking({ onBack }: MaterialPickingProps) {
       lotSerial: item.lotSerial,
       sourceLocation: currentPick.rack,
       sourceLevel: currentPick.level,
-      pickedQty: parseInt(currentPick.qty),
+      pickedQty: parseFloat(currentPick.qty),
       destinationRack: item.toLocation,
       destinationLevel: '', // Assuming destination level is not provided in the current flow
     };
 
     try {
-        await postToFrappe('warehousing.warehousing.doctype.warehouse_task.warehouse_task.picked_confirm', newPickedItem);
-        } catch (err) {
-          console.error(err);
-          setError(err);
+      // 1. Kirim ke server
+      await postToFrappe('warehousing.warehousing.doctype.warehouse_task.warehouse_task.picked_confirm', newPickedItem);
+
+      // 2. Update local state segera
+      const updatedPickedItems = [...pickedItems, newPickedItem];
+      setPickedItems(updatedPickedItems);
+
+      // Reset current pick
+      setCurrentPick({ qty: '', rack: '', level: '' });
+      setCurrentItemIndex(null);
+
+      // 3. Cek apakah ini item terakhir
+      if (updatedPickedItems.length >= order.items.length) {
+        // Ambil ulang data dari server agar list di halaman depan (ViewState 'list') terupdate
+        const getFrappe = () => (window as any).frappe;
+        const user = getFrappe()?.session?.user;
+        const res = await fetch(`/api/method/warehousing.warehousing.doctype.warehouse_task.warehouse_task.get_picklist_outstanding_tasks?user=${user}`);
+        const data = await res.json();
+        setMockOrders(data.message || []);
+        // ----------------------------
+
+        // All items picked, go back to order list
+        setView('list');
+        setOrder(null);
+        setPickedItems([]);
+      } else {
+        // More items to pick, go back to picking list
+        setView('picking');
       }
-
-    console.log('Confirming pick:', newPickedItem);
-    console.log('Current item:', item);
-    const updatedPickedItems = [...pickedItems, newPickedItem];
-    setPickedItems(updatedPickedItems);
-    
-    // Reset current pick
-    setCurrentPick({ qty: '', rack: '', level: '' });
-    setCurrentItemIndex(null);
-
-    // Check if all items are picked
-    if (updatedPickedItems.length >= order.items.length) {
-      // All items picked, go back to order list
-      setView('list');
-      setOrder(null);
-      setPickedItems([]);
-    } else {
-      // More items to pick, go back to picking list
-      setView('picking');
+    } 
+    catch (err) {
+      console.error(err);
+      setError(err);
     }
+
   };
 
   const handleBackToList = () => {
@@ -406,11 +418,12 @@ export function MaterialPicking({ onBack }: MaterialPickingProps) {
           <div className="bg-blue-50 border-l-4 border-blue-500 rounded-xl p-5">
             <div className="text-blue-900 font-medium mb-3">Enter Quantity</div>
             <div className="text-gray-900 font-medium mb-1">{order.items[currentItemIndex].name}</div>
-            <p className="text-gray-600 text-sm mb-3">SKU: {order.items[currentItemIndex].sku}</p>
+            <p className="text-gray-600 text-sm mb-3">Item : {order.items[currentItemIndex].sku}</p>
+            <p className="text-gray-600 text-sm mb-3">Lot/Serial : {order.items[currentItemIndex].lotSerial}</p>
             
             <div className="mb-4 p-3 bg-white rounded-lg">
               <div className="text-sm text-gray-600 mb-1">Required Quantity</div>
-              <div className="text-gray-900 font-medium">{order.items[currentItemIndex].quantity} units</div>
+              <div className="text-gray-900 font-medium">{order.items[currentItemIndex].quantity.toLocaleString('id-ID')} {order.items[currentItemIndex].um}</div>
             </div>
             
             <input
@@ -452,7 +465,7 @@ export function MaterialPicking({ onBack }: MaterialPickingProps) {
             
             <div className="mb-4 p-3 bg-white rounded-lg">
               <div className="text-sm text-gray-600 mb-1">Picked Quantity</div>
-              <div className="text-gray-900 font-medium">{currentPick.qty} {order.items[currentItemIndex].um}</div>
+              <div className="text-gray-900 font-medium">{parseFloat(currentPick.qty).toLocaleString('id-ID')} {order.items[currentItemIndex].um}</div>
             </div>
             
             <input
@@ -493,7 +506,7 @@ export function MaterialPicking({ onBack }: MaterialPickingProps) {
             <div className="mb-4 space-y-2">
               <div className="p-3 bg-white rounded-lg">
                 <div className="text-sm text-gray-600 mb-1">Picked Quantity</div>
-                <div className="text-gray-900 font-medium">{currentPick.qty} units</div>
+                <div className="text-gray-900 font-medium">{parseFloat(currentPick.qty).toLocaleString('id-ID')} units</div>
               </div>
               <div className="p-3 bg-white rounded-lg">
                 <div className="text-sm text-gray-600 mb-1">From Rack</div>
@@ -536,33 +549,45 @@ export function MaterialPicking({ onBack }: MaterialPickingProps) {
             
             <div className="bg-white rounded-xl p-4 mb-4 space-y-3">
               <div>
-                <div className="text-sm text-gray-600 mb-1">Item</div>
+                {/* <div className="text-sm text-gray-600 mb-1">Item</div> */}
                 <div className="text-gray-900 font-medium">{order.items[currentItemIndex].name}</div>
-                <div className="text-gray-600 text-sm">Item: {order.items[currentItemIndex].sku} Lot/Serial : {order.items[currentItemIndex].lotSerial}</div>
+                <div className="text-gray-600 text-sm  grid grid-cols-2 gap-3">
+                  <span>Item: {order.items[currentItemIndex].sku}</span> 
+                  <span>Lot/Serial : {order.items[currentItemIndex].lotSerial}</span></div>
               </div>
               
               <div className="pt-3 border-t border-gray-200 grid grid-cols-2 gap-3">
                 <div>
                   <div className="text-sm text-gray-600 mb-1">Picked Quantity</div>
-                  <div className="text-gray-900 font-medium">{currentPick.qty} units</div>
+                  <div className="text-gray-900 font-medium">{parseFloat(currentPick.qty).toLocaleString('id-ID')} {order.items[currentItemIndex].um}</div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-600 mb-1">Required Quantity</div>
-                  <div className="text-gray-900 font-medium">{order.items[currentItemIndex].quantity} units</div>
+                  <div className="text-gray-900 font-medium">{order.items[currentItemIndex].quantity.toLocaleString('id-ID')} {order.items[currentItemIndex].um}</div>
                 </div>
               </div>
               
               <div className="pt-3 border-t border-gray-200">
                 <div className="text-sm text-gray-600 mb-1">From Location</div>
-                <div className="text-gray-900 font-medium">{currentPick.rack}-{currentPick.level}</div>
+                <div className="text-gray-900 font-medium"> {order.items[currentItemIndex].sourceLocation}</div>
               </div>
             </div>
             
             <button
               onClick={handleConfirmPick}
-              className="w-full bg-green-600 text-white py-3 rounded-xl hover:bg-green-700 transition-colors font-medium"
+              disabled={loading} // Cegah klik jika sedang loading
+              className={`w-full py-3 rounded-xl transition-colors font-medium ${
+                loading 
+                  ? 'bg-gray-400 cursor-not-allowed' // Warna abu-abu jika loading
+                  : 'bg-green-600 hover:bg-green-700 text-white'
+              }`}
             >
-              Confirm Pick
+              {loading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Processing...
+                </div>
+              ) : 'Confirm Pick'}
             </button>
           </div>
         ) : null}
@@ -574,7 +599,7 @@ export function MaterialPicking({ onBack }: MaterialPickingProps) {
           {view === 'picking' && order ? (
             <>
               <BarcodeScanner onScan={handleItemScan} placeholder="Scan item barcode" autoFocus />
-              <p className="text-gray-500 mt-2 text-center text-sm">Scan items from the picking list above</p>
+              {/* <p className="text-gray-500 mt-2 text-center text-sm">Scan items from the picking list above</p> */}
             </>
           ) : view === 'list' ? (
             <div className="text-center text-gray-500 py-3">

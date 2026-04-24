@@ -13,6 +13,7 @@
   "column_break_afrn",
   "work_order_number",
   "work_order_split_number",
+  "mts_number",
   "section_break_whir",
   "amended_from",
   "site",
@@ -240,6 +241,12 @@
    "fieldname": "get_material_stock",
    "fieldtype": "Button",
    "label": "Get Material Stock"
+  },
+  {
+   "fieldname": "mts_number",
+   "fieldtype": "Link",
+   "label": "MTS Number",
+   "options": "Work Order Split"
   }
  ],
  "grid_page_length": 50,
@@ -247,7 +254,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-13 21:19:01.587216",
+ "modified": "2026-04-17 09:32:34.492455",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Work Order Comp Issued",

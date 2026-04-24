@@ -101,7 +101,7 @@ export function ItemInfo({ onBack }: ItemInfoProps) {
                     <Package className="w-4 h-4 text-gray-600" />
                     <p className="text-gray-500">Total Stock</p>
                   </div>
-                  <div className="text-gray-900">{itemData.totalStock} {itemData.um}</div>
+                  <div className="text-gray-900">{itemData.totalStock.toLocaleString('id-ID')} {itemData.um}</div>
                 </div>
 
                 <div className="p-3 bg-gray-50 rounded-xl">
@@ -143,14 +143,14 @@ export function ItemInfo({ onBack }: ItemInfoProps) {
                         <p className="text-gray-600">{loc.lot_serial}</p>
                       </div>
                       <div className="text-right">
-                        <div className="text-gray-900">{loc.quantity} {itemData.um}</div>
+                        <div className="text-gray-900">{loc.quantity.toLocaleString('id-ID')} {itemData.um}</div>
                         <p className="text-gray-500"></p>
                       </div>
                     </div>
                     <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-green-600 rounded-full"
-                        style={{ width: `${(loc.quantity / itemData.totalStock) * 100}%` }}
+                        style={{ width: `${((loc.quantity / itemData.totalStock) * 100).toLocaleString('id-ID')}%` }}
                       />
                     </div>
                   </div>
@@ -164,7 +164,7 @@ export function ItemInfo({ onBack }: ItemInfoProps) {
       {/* Fixed Scanner at Bottom */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-200 shadow-lg p-4 z-20">
         <div className="max-w-md mx-auto">
-          <BarcodeScanner onScan={handleScan} placeholder="Scan barcode (e.g., SKU12345#LOT)" autoFocus />
+          <BarcodeScanner onScan={handleScan} placeholder="Scan Item barcode" autoFocus />
           
         </div>
       </div>

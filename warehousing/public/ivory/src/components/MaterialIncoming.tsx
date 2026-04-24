@@ -20,6 +20,7 @@ interface IncomingItem {
   toLocation: string;
   verified: boolean;
   discrepancyReason?: string;
+  discrepancyReasonDesc?: string;
 }
 
 interface LotDetails {
@@ -83,15 +84,15 @@ export function MaterialIncoming({ onBack }: MaterialIncomingProps) {
             limit_page_length: 10
       });
 
-    const fetchReason = async () => {
-      const res = await fetch(`/api/resource/Reason Master?${params}`);
-      const data = await res.json();
-      const reason = data.data;
-      setdiscrepancyReasons(data.data || []);
-      console.log(reason);
-    };
-    fetchReason();
-  }, []);
+      const fetchReason = async () => {
+        const res = await fetch(`/api/resource/Reason Master?${params}`);
+        const data = await res.json();
+        const reason = data.data;
+        setdiscrepancyReasons(data.data || []);
+        console.log(reason);
+      };
+      fetchReason();
+    }, []);
 
   useEffect(() => {
     // Jika order belum ada atau statusnya sudah completed, jangan lakukan apa-apa
@@ -154,7 +155,7 @@ export function MaterialIncoming({ onBack }: MaterialIncomingProps) {
         setError('');
       }
     } else {
-      setError(`Item ${itemCode} not found in this purchase order`);
+      setError(`Item ${itemCode} and Lot/Serial ${lotSerial} not found in this purchase order`);
     }
   };
 
@@ -223,6 +224,7 @@ export function MaterialIncoming({ onBack }: MaterialIncomingProps) {
       updatedOrder.items[currentItemIndex].receivedQty = qty;
       updatedOrder.items[currentItemIndex].verified = true;
       updatedOrder.items[currentItemIndex].discrepancyReason = selectedReason;
+      updatedOrder.items[currentItemIndex].discrepancyReasonDesc = discrepancyReasons.find(r => r.name === selectedReason)?.reason;
       setOrder(updatedOrder);
       setQuantity('');
       setCurrentItemIndex(null);
@@ -507,7 +509,7 @@ export function MaterialIncoming({ onBack }: MaterialIncomingProps) {
                               <MessageSquare className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                               <div>
                                 <p className="text-amber-800 text-xs font-medium">Reason:</p>
-                                <p className="text-amber-700 text-sm">{item.discrepancyReason}</p>
+                                <p className="text-amber-700 text-sm">{item.discrepancyReasonDesc}</p>
                               </div>
                             </div>
                           </div>

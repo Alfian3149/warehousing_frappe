@@ -2,10 +2,15 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Material Incoming", {
+
     refresh(frm) {
         frm.disable_save_notification = true;
         frm.set_df_property('status', 'read_only', 0);
         frm.set_df_property('doc_status', 'hidden', 1);
+        frm.set_df_property('status', 'read_only', 1);
+
+        frm.fields_dict['material_incoming_item'].grid.wrapper.find('.grid-row-checkbox').hide();
+        frm.fields_dict['material_incoming_item'].grid.wrapper.find('.row-check').hide();
 
         frm.fields_dict['purchase_order'].$input.on('blur', function() {
             if (frm.doc.purchase_order && !frm.doc.status) { // Pastikan ada nomor PO dan dokumen sudah disimpan sebelumnya
@@ -26,29 +31,36 @@ frappe.ui.form.on("Material Incoming", {
         }
 
         if (frm.doc.doc_status === 1){
-           // frm.set_read_only();
+            let fields_to_disable = ['full_receipt_for_all_lines', 'assign_an_expiration_date_value_for_specified_items', 'initiate_receipt_location', 'material_incoming_item'];
+
+            fields_to_disable.forEach(field => {
+                frm.set_df_property(field, 'read_only', 1);
+            });
+
             frm.page.clear_primary_action();
-            frm.page.set_primary_action(__('Cancel'), function() {
-                frappe.confirm(
-                    __('Apakah Anda yakin ingin melakukan cancel?'),
-                    function() { 
-                        //frappe.msgprint("test");
-                        frm.set_value("status", "Cancelled"); // Set status menjadi Submitted
-                        frm.set_value("doc_status", 2); // Set status menjadi Submitted
-                       
-                        frm.save().then(() => {
-                            frappe.hide_msgprint();
-                            frappe.utils.play_sound("cancel");
-                            frappe.show_alert({
-                                message: __('Document Cancelled'),
-                                indicator: 'red'
+            if (frm.doc.status !== "Confirmed" && frm.doc.status !== "Transferring"){ 
+                frm.page.set_primary_action(__('Cancel'), function() {
+                    frappe.confirm(
+                        __('Apakah Anda yakin ingin melakukan cancel?'),
+                        function() { 
+                            //frappe.msgprint("test");
+                            frm.set_value("status", "Cancelled"); // Set status menjadi Submitted
+                            frm.set_value("doc_status", 2); // Set status menjadi Submitted
+                        
+                            frm.save().then(() => {
+                                frappe.hide_msgprint();
+                                frappe.utils.play_sound("cancel");
+                                frappe.show_alert({
+                                    message: __('Document Cancelled'),
+                                    indicator: 'red'
+                                });
                             });
-                        });
-                    },
-                    function() {
-                    },
-                );
-            }).addClass('btn-light');
+                        },
+                        function() {
+                        },
+                    );
+                }).addClass('btn-light');
+            }
             
         }
         else if(frm.doc.doc_status === 2){
@@ -115,7 +127,9 @@ frappe.ui.form.on("Material Incoming", {
                         label: __("Line"),
                         fieldname: "filter_line",
                         fieldtype: "Int",
-                        onchange: () => sync_filter()
+                        onchange: () => {
+                            sync_filter_item(dialog);
+                        }
                     },
                     {
                         fieldtype: "Column Break"
@@ -123,9 +137,23 @@ frappe.ui.form.on("Material Incoming", {
                     {
                         label: __("Item"),
                         fieldname: "filter_item",
-                        fieldtype: "Link",
-                        options: "Part Master",
-                        onchange: () => sync_filter_item()
+                        fieldtype: "Data",
+                        /* options: "Part Master", */
+                        onchange: () => {
+                            sync_filter_item(dialog);
+                        }
+                    },
+                    {
+                        fieldtype: "Column Break"
+                    },
+                    {
+                        label: __("Lot/Serial"),
+                        fieldname: "filter_lot",
+                        fieldtype: "Data",
+                        /* options: "Part Master", */
+                        onchange: () => {
+                            sync_filter_item(dialog);
+                        }
                     },
                     {
                         fieldtype: "Section Break" 
@@ -481,6 +509,7 @@ frappe.ui.form.on("Material Incoming", {
                         let data = r.message.dsPOResponse;
                         frm.clear_table('material_incoming_item');
                         let this_today = frappe.datetime.get_today();
+                        
                         if (data.ttpod_det && data.ttpod_det.length > 0) {
                             data.ttpod_det.forEach(row => {
                                 frappe.db.get_single_value('Material Incoming Control', 'strict_when_qty_per_pallet_item_is_zero')
@@ -528,9 +557,12 @@ frappe.ui.form.on("Material Incoming", {
                         }
 
                         setTimeout(() => { 
-                           frm.refresh_field('material_incoming_item');
+                            frm.refresh_field('material_incoming_item');
+                            frm.fields_dict['material_incoming_item'].grid.wrapper.find('.grid-row-checkbox').hide();
+                            frm.fields_dict['material_incoming_item'].grid.wrapper.find('.row-check').hide();
                         }, 1000);
 
+                       
                         
                     }
                     else {
@@ -553,6 +585,8 @@ frappe.ui.form.on("Material Incoming", {
                 d.total_label = 0;
             }
             frm.refresh_field('material_incoming_item');
+            frm.fields_dict['material_incoming_item'].grid.wrapper.find('.grid-row-checkbox').hide();
+            frm.fields_dict['material_incoming_item'].grid.wrapper.find('.row-check').hide();
         });
     },
     initiate_receipt_location(frm) {
@@ -564,6 +598,8 @@ frappe.ui.form.on("Material Incoming", {
                 d.location_to_receive = "";
             }
             frm.refresh_field('material_incoming_item');
+            frm.fields_dict['material_incoming_item'].grid.wrapper.find('.grid-row-checkbox').hide();
+            frm.fields_dict['material_incoming_item'].grid.wrapper.find('.row-check').hide();
         }); 
     },
     assign_an_expiration_date_value_for_specified_items(frm) {
@@ -575,6 +611,8 @@ frappe.ui.form.on("Material Incoming", {
                 d.expired_date = "";
             }
             frm.refresh_field('material_incoming_item');
+            frm.fields_dict['material_incoming_item'].grid.wrapper.find('.grid-row-checkbox').hide();
+            frm.fields_dict['material_incoming_item'].grid.wrapper.find('.row-check').hide();
         }); 
     },
  
@@ -673,8 +711,9 @@ frappe.ui.form.on("Material Incoming", {
                                 <td>${item.pod_line}</td>
                                 <td>${item.item_number}</td>
                                 <td>${item.item_description}</td>
-                                <td class="text-right"><strong>${item.qty_to_receive}</strong></td>
+                                <td class="text-right"><strong>${flt(item.qty_to_receive, 3)}</strong></td>
                                 <td>${item.um}</td>
+                                <td>${item.expired_date || ''}</td>
                             </tr>
                         `).join('');
 
@@ -682,18 +721,20 @@ frappe.ui.form.on("Material Incoming", {
                             <tr>
                                 <td class="bg-light" style="width: 30%;">
                                     <b><a href="/app/material-incoming/${row.name}">${row.name}</a></b><br>
-                                    <small>Receipt Date: ${frappe.datetime.str_to_user(row.transaction_date)}</small><br>
-                                    <span class="label label-info">${row.status} on ${frappe.datetime.str_to_user(row.modified)}</span>
+                                    <small>Print & Assign on: ${frappe.datetime.str_to_user(row.pv_assigned_date)}</small><br>
+                                    <small>Receipt on: ${frappe.datetime.str_to_user(row.confirmed_date)}</small><br>
+                                    <small>Transfer on: ${frappe.datetime.str_to_user(row.tf_assigned_date)}</small>
 
                                 </td>
                                 <td style="padding: 0;">
                                     <table class="table table-sm mb-0" style="border:none;">
                                         <tr class="text-muted small">
-                                            <th>PO Line</th>
-                                            <th>Item</th>
-                                            <th>Name</th>
-                                            <th class="text-right">Qty</th>
-                                            <th>UM</th>
+                                            <th style="width: 5%;">PO Line</th>
+                                            <th style="width: 20%;">Item</th>
+                                            <th style="width: 40%;">Name</th>
+                                            <th style="width: 10%;" class="text-right">Qty</th>
+                                            <th style="width: 5%;">UM</th>
+                                            <th style="width: 20%;">Expire</th>
                                         </tr>
                                         ${item_rows}
                                     </table>
@@ -813,23 +854,33 @@ frappe.ui.form.on('Material Incoming Item', {
 
             row.total_label = Math.ceil(row.qty_to_receive / row.qty_per_pallet);
             frm.refresh_field('material_incoming_item');
+            frm.fields_dict['material_incoming_item'].grid.wrapper.find('.grid-row-checkbox').hide();
+            frm.fields_dict['material_incoming_item'].grid.wrapper.find('.row-check').hide();
              return;
         }
     }
 });
 
-function sync_filter_item() {
-    // Ambil nilai filter dan bersihkan spasi
-    msgprint("Filtering by Item...");
-    //let f_line = (dialog.get_value("filter_line") || "").toString().trim();
-    let f_item = (dialog.get_value("filter_item") || "").toLowerCase().trim();
+function sync_filter_item(dialog) {
+    let d = dialog || cur_dialog;
+    if (!d) return;
 
-    let grid = dialog.get_field('xx_material_incoming_item').grid;
+    let f_line = (d.get_value("filter_line") || "").toString().toLowerCase().trim();
+    let f_item = (d.get_value("filter_item") || "").toString().toLowerCase().trim();
+    let f_lot = (d.get_value("filter_lot") || "").toString().toLowerCase().trim();
+
+    let grid = d.get_field('xx_material_incoming_item').grid;
+
     grid.grid_rows.forEach(row => {
-        let row_item = (row.doc.item || "").toLowerCase();
-        let match_item = f_item === "" || row_item.includes(f_item);
+        let row_item = (row.doc.item || "").toString().toLowerCase();
+        let row_line = (row.doc.line || "").toString().toLowerCase();
+        let row_lot = (row.doc.lotserial || "").toString().toLowerCase();
 
-        if (match_item) {
+        let match_item = f_item === "" || row_item.includes(f_item);
+        let match_line = f_line === "" || row_line.includes(f_line);
+        let match_lot = f_lot === "" || row_lot.includes(f_lot);
+
+        if (match_item && match_line && match_lot) {
             row.wrapper.show();
         } else {
             row.wrapper.hide();

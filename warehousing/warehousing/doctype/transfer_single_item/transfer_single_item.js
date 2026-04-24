@@ -9,6 +9,13 @@ frappe.ui.form.on("Transfer Single Item", {
         
     },
     refresh(frm) {
+        frm.set_query('reason', function() {
+            return {
+                filters: {
+                    'key_name': 'TASKING_REASON',
+                }
+            };
+        });
         let d = new frappe.ui.form.MultiSelectDialog({ doctype: "Inventory" });
         d.dialog.hide();
 

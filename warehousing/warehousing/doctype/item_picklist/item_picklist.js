@@ -11,21 +11,50 @@ frappe.ui.form.on("Item Picklist", {
     },
 
     before_save: function(frm) {
+        if (!frm.is_new()){
         // Mengambil nama baris (name/ID) yang sedang dicentang di grid
-        let selected_rows = frm.fields_dict['item_picklist_summary'].grid.get_selected();
-        
-        if (selected_rows.length > 0) {
-            console.log("Baris yang sedang dicentang:", selected_rows);
+            let selected_rows = frm.fields_dict['item_picklist_summary'].grid.get_selected();
             
-            frm.doc.item_picklist_summary.forEach(d => {
-                let status = selected_rows.includes(d.name) ? 1 : 0;
-                frappe.model.set_value(d.doctype, d.name, 'is_selected', status);
-            });
-        
+            if (selected_rows.length > 0) {
+                let child_table = frm.doc.item_picklist_summary || [];
+                let all_zero = child_table.every(row => flt(row.quantity_picked) <= 0);
+
+                if (child_table.length === 0 || all_zero) {                        
+                    frappe.msgprint({
+                        title: __('ERROR'),
+                        indicator: 'red',
+                        message: __('There is no item in the details list. Please running the Get Item Stock first.')
+                    });
+                    frappe.validated = false;
+                }
+
+                frm.doc.item_picklist_summary.forEach(d => {
+                    let status = selected_rows.includes(d.name) ? 1 : 0;
+                    frappe.model.set_value(d.doctype, d.name, 'is_selected', status);
+                });
+            
+            }
+            else{
+                frappe.msgprint({
+                    title: __('ERROR'),
+                    indicator: 'red',
+                    message:__("There is no selected item in the request list"),
+                });
+                frappe.validated = false;
+                return;
+            }
         }
     },
  
  	refresh(frm) {
+        $(frm.fields_dict['item_picklist_summary'].wrapper).on('click', 'input[type="checkbox"]', function() {
+            let selected_rows = frm.fields_dict['item_picklist_summary'].grid.get_selected();
+            frm.doc.item_picklist_summary.forEach(d => {
+                let status = selected_rows.includes(d.name) ? 1 : 0;
+                frappe.model.set_value(d.doctype, d.name, 'is_selected', status);
+            });
+        });
+
         frm.events.sync_grid_selection(frm);
         /* frm.fields_dict['item_picklist_summary'].grid.wrapper.on('click', '.grid-row-checkbox', function() {
             alert("test");

@@ -35,6 +35,7 @@ export const RackCheck: React.FC<RackCheckProps> = ({ onBack }) => {
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const [scannedRackCode, setScannedRackCode] = useState<string>('');
   const [level, setLevel] = useState<string>('');
+  const [fullLocation, setFullLocation] = useState<string>('');
   const [step, setStep] = useState<'scan' | 'level'>('scan');
   const levelInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
@@ -50,22 +51,35 @@ export const RackCheck: React.FC<RackCheckProps> = ({ onBack }) => {
     setStep('level');
     setError(false);
     setRackData(null);
+    setFullLocation('');
   };
 
   const handleLevelSubmit = () => {
-    if (!level.trim()) {
-      return;
+    // 1. Tentukan nilai lokasi secara lokal agar bisa langsung dipakai
+    let finalLocation = "";
+
+    if (!level || level.trim() === '') {
+      finalLocation = `${scannedRackCode}`;
+    } else {
+      // Menambahkan padding 0 jika ada input level
+      finalLocation = `${scannedRackCode}-${level.padStart(2, '0')}`;
     }
 
-    const fullLocation = `${scannedRackCode}-${level.padStart(2, '0')}`;
-    searchRackLocation(fullLocation);
-  };
+    // 2. Update state untuk keperluan UI (render)
+    setFullLocation(finalLocation);
 
-  const handleLevelKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleLevelSubmit();
-    }
+    // 3. Gunakan nilai finalLocation untuk keperluan logika instan
+    console.log("Submitting level:", level);
+    console.log("Final Location to Search:", finalLocation);
+
+    // Panggil fungsi pencarian dengan nilai yang sudah pasti benar
+    searchRackLocation(finalLocation);
   };
+    const handleLevelKeyPress = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        handleLevelSubmit();
+      }
+    };
 
   const searchRackLocation = async (fullLocation: string) => {
     // Mock database of rack locations
@@ -159,7 +173,7 @@ export const RackCheck: React.FC<RackCheckProps> = ({ onBack }) => {
             <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
             <div>
               <div className="text-red-900">Location Not Found</div>
-              <p className="text-red-700">The location {scannedRackCode}-{level.padStart(2, '0')} is not in the system.</p>
+              <p className="text-red-700">The location {fullLocation} is not in the system.</p>
             </div>
           </div>
         )}
@@ -173,13 +187,13 @@ export const RackCheck: React.FC<RackCheckProps> = ({ onBack }) => {
                 <div className="text-gray-900 mb-3">Location Information</div>
                 
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                  {/* <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
                     <Warehouse className="w-5 h-5 text-gray-600" />
                     <div className="flex-1">
                       <p className="text-gray-500">Warehouse</p>
                       <div className="text-gray-900">{rackData.zone}</div>
                     </div>
-                  </div>
+                  </div> */}
 
                   <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
                     <MapPin className="w-5 h-5 text-gray-600" />
@@ -193,7 +207,7 @@ export const RackCheck: React.FC<RackCheckProps> = ({ onBack }) => {
                     <Package className="w-5 h-5 text-gray-600" />
                     <div className="flex-1">
                       <p className="text-gray-500">Capacity</p>
-                      <div className="text-gray-900">{rackData.occupied} / {rackData.capacity} {rackData.um_capacity}</div>
+                      <div className="text-gray-900">{rackData.occupied} / {rackData.capacity.toLocaleString('id-ID')} {rackData.um_capacity}</div>
                       <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-blue-600 rounded-full transition-all"
@@ -220,7 +234,7 @@ export const RackCheck: React.FC<RackCheckProps> = ({ onBack }) => {
                             <p className="text-gray-500">{item.sku}</p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-gray-900 font-medium">{item.totalQuantity} </span>
+                            <span className="text-gray-900 font-medium">{item.totalQuantity.toLocaleString('id-ID')} </span>
                             {expandedItems.has(index) ? (
                               <ChevronUp className="w-5 h-5 text-gray-600" />
                             ) : (
@@ -305,14 +319,14 @@ export const RackCheck: React.FC<RackCheckProps> = ({ onBack }) => {
               
               <button
                 onClick={handleLevelSubmit}
-                disabled={!level.trim()}
+              
                 className="w-full bg-blue-600 text-white py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors"
               >
                 Search Location
               </button>
               
               <p className="text-gray-500 text-center text-sm">
-                Searching for: {scannedRackCode}-{level ? level.padStart(2, '0') : '__'}
+                Searching for: {fullLocation}
               </p>
             </div>
           )}

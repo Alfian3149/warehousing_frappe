@@ -3,8 +3,10 @@
 
 frappe.ui.form.on("Work Order Comp Issued", {
     onload: function(frm) {
+        frm.set_df_property('mts_number', 'hidden', 1);
         filter_child_table_items(frm);
         frm.set_df_property('work_order_split_number', 'read_only', 1);
+        
         frm.set_df_property('section_break_whir', 'hidden', 1);
         frm.set_df_property('work_order_detail_section', 'hidden', 1);
         frm.set_df_property('item_summary_to_issued', 'cannot_add_rows', true);
@@ -21,7 +23,7 @@ frappe.ui.form.on("Work Order Comp Issued", {
 
     },
  	refresh(frm) {
-         frm.add_custom_button(__('Fast Entry Scanner'), function() {
+         frm.add_custom_button(__('Entry Via Scanner'), function() {
             // Array sementara untuk menampung hasil scan
             let scanned_items = [];
             let scanned_qty = [];
@@ -45,7 +47,7 @@ frappe.ui.form.on("Work Order Comp Issued", {
 
             
             let d = new frappe.ui.Dialog({
-                title: 'Scan Barcode Beruntun',
+                title: 'Scan Barcode',
                 fields: [
                     {
                         label: 'Barcode',
@@ -60,7 +62,7 @@ frappe.ui.form.on("Work Order Comp Issued", {
                     }
                 ],
                 size: 'large',
-                primary_action_label: 'Save',
+                primary_action_label: 'Process To Issued',
                 primary_action(values) {
                     if (scanned_items.length === 0) {
                         frappe.msgprint("Belum ada data yang discan.");
@@ -191,7 +193,17 @@ frappe.ui.form.on("Work Order Comp Issued", {
                         const item_found = scanned_items.find(row => row.item_code === item)
                         if (item_found){
                             d.set_value('scan_input', '');
-                            item_found.qty_scanned += flt(quantity);
+                            let totalQtyScanned = item_found.qty_scanned  +  flt(quantity);
+                            /* if (item_found.qty_lot_available <  totalQtyScanned) {
+                                frappe.msgprint({
+                                title: __('ERROR'),
+                                indicator: 'red',
+                                message:__("Qty scanned is over for the Qty available item/LotSerial ", [item, unique_id]),
+                                 });
+                                frappe.validated = false; 
+                                return false;
+                            } */
+                            item_found.qty_scanned = totalQtyScanned;
                             scanned_qty.push({item_code:item, quantity_scanned:flt(quantity), unique_id_scanned:unique_id})
                             render_scan_list();
                         }
@@ -222,7 +234,7 @@ frappe.ui.form.on("Work Order Comp Issued", {
 
                         if (row_found) {
                             frappe.call({
-                            method: "warehousing.warehousing.doctype.inventory.inventory.get_inventory_clean_for_production",
+                            method: "warehousing.warehousing.doctype.work_order_comp_issued.work_order_comp_issued.get_inventory_clean_for_production",
                             args: {
                                 site: "1000",
                                 item: item,
@@ -273,7 +285,6 @@ frappe.ui.form.on("Work Order Comp Issued", {
             render_scan_list(); // Inisialisasi tabel kosong
         });
 
-
         let container = frm.get_field('lotserial_has_received').$wrapper;
         let container1 = frm.get_field('html_wo_detail').$wrapper;
         let html = ``;
@@ -290,7 +301,12 @@ frappe.ui.form.on("Work Order Comp Issued", {
         if(frm.doc.for_material_packaging__blending === "Packaging"){
             frm.set_df_property('qty_product_completed_to_be_issued', 'read_only', 1);
         }
+        else if(frm.doc.for_material_packaging__blending === "Blending"){
+            frm.set_df_property('mts_number', 'hidden', 0);
+            frm.set_df_property('work_order_split_number', 'hidden', 1);
+        }
         else{
+            
             frm.set_df_property('all_components_section', 'hidden', 1);
             frm.set_df_property('get_material_stock', 'hidden', 1);
             
@@ -429,7 +445,8 @@ frappe.ui.form.on("Work Order Comp Issued", {
             frm.set_df_property('all_components_section', 'hidden', 0);
         }
         else if (frm.doc.for_material_packaging__blending === "Blending") {
-            frm.set_df_property('work_order_split_number', 'read_only', 0);
+            frm.set_df_property('mts_number', 'hidden', 0);
+            frm.set_df_property('work_order_split_number', 'hidden', 1);
             frm.set_df_property('work_order_number', 'read_only', 0);
             frm.set_df_property('all_components_section', 'hidden', 1);
         }
@@ -466,9 +483,9 @@ frappe.ui.form.on("Work Order Comp Issued", {
         });
     },
 
-    work_order_split_number: function(frm) {
+    /* work_order_split_number: function(frm) {
         frm.trigger('get_work_order_details');
-    },
+    }, */
 
     work_order_number: function(frm) {
         frm.trigger('fetch_workorder_from_qad');

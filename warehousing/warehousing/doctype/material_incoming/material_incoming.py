@@ -175,7 +175,7 @@ def get_po_history_with_items(purchase_order, current_doc):
     for doc in history:
         doc['items'] = frappe.db.get_all("Material Incoming Item",
             filters={"parent": doc.name, "qty_to_receive": [">", 0]  },
-            fields=["pod_line", "item_number", "item_description", "qty_to_receive", "um"]
+            fields=["pod_line", "item_number", "item_description", "qty_to_receive", "um", "expired_date"]
         )
     
     return history

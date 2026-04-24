@@ -5,6 +5,8 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "picklist_number",
+  "warehouse_task_number",
   "site",
   "part",
   "lotserial",
@@ -38,12 +40,22 @@
    "fieldtype": "Data",
    "label": "Site",
    "reqd": 1
+  },
+  {
+   "fieldname": "picklist_number",
+   "fieldtype": "Data",
+   "label": "Picklist Number"
+  },
+  {
+   "fieldname": "warehouse_task_number",
+   "fieldtype": "Data",
+   "label": "Warehouse Task Number"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-14 13:23:00.282726",
+ "modified": "2026-04-17 04:35:30.779130",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Lot Serial Handover Yet",

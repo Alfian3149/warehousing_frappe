@@ -359,10 +359,10 @@ export function MaterialTransfer({ onBack }: MaterialTransferProps) {
                   <div className="flex-1 p-4 bg-blue-50 rounded-xl">
                     <div className="flex items-center gap-2 mb-2">
                       <MapPin className="w-4 h-4 text-blue-600" />
-                      <span className="text-blue-900">From</span>
+                      <span className="text-blue-900">From: {item?.currentLocation}</span>
                     </div>
-                    <div className="text-gray-900">{item?.currentRack}</div>
-                    <p className="text-gray-600">{item?.currentLocation}</p>
+                    {/* <div className="text-gray-900">{item?.currentRack}</div>
+                    <p className="text-gray-600">{item?.currentLocation}</p> */}
                   </div>
 
                   <ArrowRight className="w-6 h-6 text-gray-400 flex-shrink-0" />
@@ -370,9 +370,9 @@ export function MaterialTransfer({ onBack }: MaterialTransferProps) {
                   <div className="flex-1 p-4 bg-green-50 rounded-xl">
                     <div className="flex items-center gap-2 mb-2">
                       <MapPin className="w-4 h-4 text-green-600" />
-                      <span className="text-green-900">To</span>
+                      <span className="text-green-900">To : {destination.rack} </span>
                     </div>
-                    <div className="text-gray-900">{destination.rack}</div>
+                   {/*  <div className="text-gray-900">{destination.rack}</div> */}
                     {/* <p className="text-gray-600">{destination.location}</p> */}
                   </div>
                 </div>
@@ -384,12 +384,18 @@ export function MaterialTransfer({ onBack }: MaterialTransferProps) {
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Desc:</span>
-                      <span className="text-gray-900">{item?.name}</span>
+                      <span className="text-gray-600">Description: </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-900"> {item?.name}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Item:</span>
                       <span className="text-gray-900">{item?.sku}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Lot/Serial:</span>
+                      <span className="text-gray-900">{item?.lotSerial}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Quantity:</span>

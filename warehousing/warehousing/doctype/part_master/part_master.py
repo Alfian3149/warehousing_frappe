@@ -35,7 +35,8 @@ def get_item_stock_details(item_code):
         frappe.throw(f"Item {item_code} tidak ditemukan", frappe.DoesNotExistError)
     inventory_entries = frappe.get_all("Inventory", 
         filters={"part": item_code, "qty_on_hand": [">", 0]},
-        fields=["warehouse_location", "qty_on_hand","lot_serial","creation","expire_date", "site"]
+        fields=["warehouse_location", "qty_on_hand","lot_serial","creation","expire_date", "site"],
+        order_by="expire_date,lot_serial"
     )
     locations = []
     total_stock = 0

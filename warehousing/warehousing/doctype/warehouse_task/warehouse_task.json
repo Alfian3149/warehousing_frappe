@@ -14,6 +14,7 @@
   "po_number",
   "wo_split_number",
   "status",
+  "is_needed_handover",
   "section_break_sfld",
   "assign_to_user",
   "date_instruction",
@@ -165,13 +166,20 @@
    "fieldname": "wo_split_number",
    "fieldtype": "Data",
    "label": "WO Split Number"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "0",
+   "fieldname": "is_needed_handover",
+   "fieldtype": "Check",
+   "label": "Is Needed Handover?"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-03-31 07:49:58.989294",
+ "modified": "2026-04-17 05:36:15.394010",
  "modified_by": "Administrator",
  "module": "warehousing",
  "name": "Warehouse Task",

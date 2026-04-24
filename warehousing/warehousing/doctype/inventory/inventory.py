@@ -123,53 +123,7 @@ def get_iventory_by_item_location(item_list, in_location):
         qty_item_in = {"part":item, "total_qty":total_qty}
     return qty_item_in
 
-@frappe.whitelist() 
-def get_inventory_clean_for_production(site, item, lotserial, status, qty_needed): 
-    notOk = False
-    message = ""
-    clean_iventory = []
-    stocks = frappe.db.sql(f"""
-            SELECT 
-                inv.name, inv.site, inv.part, inv.warehouse_location, inv.lot_serial, inv.qty_on_hand, inv.qty_reserverd, inv.expire_date, inv.conversion_factor, inv.um_packaging, inv.qty_per_pallet
-            FROM 
-                `tabInventory` inv
-            JOIN 
-                `tabWarehouse Location` loc ON inv.warehouse_location = loc.name
-            WHERE 
-                inv.site = %s 
-                AND inv.part = %s 
-                AND inv.lot_serial = %s
-                AND inv.inventory_status = %s
-                AND (inv.expire_date > %s OR inv.expire_date IS NULL OR inv.expire_date = '')
-                AND inv.qty_on_hand > 0
-                AND loc.is_active = 1
-                AND loc.can_reserved_for_wo_comp_issued = 1 
-            ORDER BY 
-                inv.lot_serial ASC
-    """, (site, item, lotserial, status, frappe.utils.nowdate()), as_dict=True)
 
-    for row in stocks:
-        available = flt(row.qty_on_hand) - flt(row.qty_reserverd)
-        not_handover_yet = frappe.db.get_list("Lot Serial Handover Yet", 
-            {"site": site, "part": row.part, "lotserial": row.lot_serial}, 
-            ["SUM(qty_on_hand) as qty"])
-        if not_handover_yet:
-            available -=  flt(not_handover_yet[0].qty)
-
-        if available > 0 :
-            #qty_reserved = flt(row.qty_reserverd) + flt(qty_needed)
-            #frappe.db.set_value('Inventory', row.name, 'qty_reserverd', min(qty_reserved, flt(row.qty_on_hand))  )
-            clean_iventory.append(row)
-
-    if not clean_iventory: 
-        notOk = True
-        message = "Not found available stock"
-
-    return {
-        "notOk": notOk,
-        "message": message,
-        "inventory":clean_iventory
-    }
 @frappe.whitelist()
 def delete_inventory_entry(site, part, lot_serial, reference, whs_location):
     """
@@ -214,6 +168,9 @@ def get_fifo_picklist_with_reserved(itemPicklistName, item_status):
     for request in itemPicklistDoc.select_request:
         itemRequest = frappe.get_doc("Item Request", request.request_master) 
         for item in itemRequest.items:
+            if (flt(item.quantity_requested) - flt(item.quantity_picked)) <= 0 :
+                continue
+                
             if item.part not in unique_items:
                 # Jika belum ada, buat objek baru
                 unique_items[item.part] = PickingItem(
@@ -307,6 +264,7 @@ def get_fifo_picklist_with_reserved(itemPicklistName, item_status):
                 AND loc.is_active = 1
                 AND loc.can_picking_reserved = 1 
             ORDER BY 
+                IFNULL(inv.expire_date, '9999-12-31') ASC,
                 inv.lot_serial ASC
         """, (site, item.part, item_status, frappe.utils.nowdate()), as_dict=True)
 
@@ -358,7 +316,7 @@ def get_fifo_picklist_with_reserved(itemPicklistName, item_status):
                             take_qty = flt(remaining_needed)
 
 
-                part = frappe.db.get_value("Part Master", "120-013", ["description","um", "item_group"], as_dict=1)
+                part = frappe.db.get_value("Part Master", stock_oh.part, ["description","um", "item_group"], as_dict=1)
                 results.append({
                     "site": stock_oh.site,
                     "part": stock_oh.part,

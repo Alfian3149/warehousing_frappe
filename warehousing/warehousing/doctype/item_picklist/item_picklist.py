@@ -17,7 +17,25 @@ class ItemPicklist(Document):
 		
 		return
 	
+	def before_submit(self):
+		summary_table_field = "item_picklist_summary" # Ganti dengan nama field child table summary
+		detail_table_field = "item_picklist_detail"
+
+		kept_item_codes = {
+			d.part for d in self.get(summary_table_field) if d.is_selected
+		}
+		
+		self.set(summary_table_field, [
+			d for d in self.get(summary_table_field) if d.is_selected
+		])
+		self.set(detail_table_field, [
+			d for d in self.get(detail_table_field) if d.part in kept_item_codes
+		])
+
 	def on_submit(self):
+		if not any(row.is_selected for row in self.item_picklist_summary):
+			frappe.throw(_("Silakan pilih setidaknya satu item pada list summary reuquest sebelum melakukan submit."))
+
 		unique_items = {}
 		itemRequestDoc = []
 
@@ -39,11 +57,16 @@ class ItemPicklist(Document):
 				rest_needed = qty_requested - qty_already_picked
 
 				if rest_needed > 0:
+					doc = frappe.get_doc("Item Request Detail", itemRequestSummary.name)
 					if totalPicked >= rest_needed:
 						totalPicked -= rest_needed
-						frappe.db.set_value("Item Request Detail", itemRequestSummary.name, "quantity_picked", itemRequestSummary.quantity_requested)
+						#frappe.db.set_value("Item Request Detail", itemRequestSummary.name, "quantity_picked", itemRequestSummary.quantity_requested)
+						doc.quantity_picked = itemRequestSummary.quantity_requested
+						doc.save()
 					else:
-						frappe.db.set_value("Item Request Detail", itemRequestSummary.name, "quantity_picked", qty_already_picked + totalPicked)
+						#frappe.db.set_value("Item Request Detail", itemRequestSummary.name, "quantity_picked", qty_already_picked + totalPicked)
+						doc.quantity_picked = qty_already_picked + totalPicked
+						doc.save()
 						totalPicked = 0
 						break
 
@@ -52,6 +75,7 @@ class ItemPicklist(Document):
 			new_task.task_type = "Picking"
 			new_task.reference_doctype = "Item Picklist"
 			new_task.reference_name = self.name
+			new_task.is_needed_handover = 1
 			new_task.wo_split_number = ", ".join(itemRequestDoc)
 			""" new_task.assign_to_user = assigned_to_person
 			new_task.assign_to_role = assigned_to_role """
@@ -72,22 +96,25 @@ class ItemPicklist(Document):
 				})
 
 			new_task.insert()
+			
+			for item in self.item_picklist_detail:
+				doc_reserved_task = frappe.get_doc({
+					"doctype": "Reserved Task Entry",
+					"purpose" : "Picking",
+					"doctype_source" : "Warehouse Task",
+					"task": new_task.name,
+					"site": item.site,
+					"part": item.part,
+					"lot_serial": item.lot_serial,
+					"warehouse_location": item.from_location,
+					"destination_location": item.to_location,
+					"qty": item.quantity, 
+				})
+				doc_reserved_task.insert(ignore_permissions=True)
+
+
 		except Exception as e:
 			frappe.log_error(frappe.get_traceback(), "Error pada Create Warehouse Task")
 			frappe.throw(f"Gagal membuat Warehouse Task: {str(e)}")
 
-		for item in self.item_picklist_detail:
-			doc_reserved_task = frappe.get_doc({
-				"doctype": "Reserved Task Entry",
-				"purpose" : "Picking",
-				"doctype_source" : "Warehouse Task",
-				"task": new_task.name,
-				"site": item.site,
-				"part": item.part,
-				"lot_serial": item.lot_serial,
-				"warehouse_location": item.from_location,
-				"destination_location": item.to_location,
-				"qty": item.quantity, 
-			})
-			doc_reserved_task.insert(ignore_permissions=True)
 

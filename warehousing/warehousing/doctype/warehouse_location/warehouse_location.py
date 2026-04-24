@@ -67,7 +67,7 @@ def get_location_details(location):
         as_dict=1
     )
 	if not rack:
-		frappe.throw(f"Location {location} not found", frappe.DoesNotExistError)
+		frappe.throw(f"Location {normalized_loc} not found", frappe.DoesNotExistError)
 	
 	inventory_items = frappe.get_all("Inventory", 
         filters={"warehouse_location": normalized_loc, "qty_on_hand": [">", 0]},
@@ -92,14 +92,12 @@ def get_location_details(location):
 		
 		lot_info = {}
 		if inv.lot_serial:
-			lot_data = frappe.db.get_value("Lot", inv.lot_serial, ["creation", "expiry_date"], as_dict=1)
-			if lot_data:
-				lot_info = {
-                    "lotNumber": inv.lot_serial,
-                    "quantity": inv.qty_on_hand,
-                    "expiryDate": inv.expire_date.strftime('%Y-%m-%d') if inv.expire_date else None,
-                    "manufactureDate": inv.creation.strftime('%Y-%m-%d') if inv.creation else None
-                }
+			lot_info = {
+				"lotNumber": inv.lot_serial,
+				"quantity": inv.qty_on_hand,
+				"expiryDate": inv.expire_date.strftime('%Y-%m-%d') if inv.expire_date else None,
+				"manufactureDate": inv.creation.strftime('%Y-%m-%d') if inv.creation else None
+			}
 		if not lot_info:
 			lot_info = {"lotNumber": inv.lot_serial or "N/A", "quantity": inv.qty_on_hand, "manufactureDate": inv.creation.strftime('%Y-%m-%d'), "expiryDate": inv.expire_date.strftime('%Y-%m-%d') if inv.expire_date else None}
 			

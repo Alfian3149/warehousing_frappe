@@ -36,7 +36,6 @@ Faker==18.10.1
 filelock==3.20.4
 filetype==1.2.0
 fonttools==4.61.1
--e git+https://github.com/frappe/frappe.git@315eb492a4e9d21d143cb95d92d7cfa1513ea408#egg=frappe
 freezegun==1.2.2
 gitdb==4.0.12
 GitPython==3.1.46
@@ -46,7 +45,6 @@ google-auth==2.48.0
 google-auth-httplib2==0.3.0
 google-auth-oauthlib==1.2.4
 googleapis-common-protos==1.72.0
-gunicorn @ git+https://github.com/frappe/gunicorn@bb554053bb87218120d76ab6676af7015680e8b6
 hiredis==2.2.3
 html5lib==1.1
 httplib2==0.31.2
@@ -139,7 +137,6 @@ unittest-xml-reporting==3.2.0
 uritemplate==4.2.0
 urllib3==2.6.3
 vobject==0.9.9
--e git+https://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@github.com/Alfian3149/warehousing_frappe.git@08fb6dfb47ec6ba66f904422befc4b6f88bf5129#egg=warehousing
 watchdog==3.0.0
 wcwidth==0.6.0
 weasyprint==68.0
